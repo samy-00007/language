@@ -1,4 +1,5 @@
-use logos::Logos;
+use logos::{Logos, Lexer};
+
 
 #[derive(Logos, Debug, PartialEq)]
 #[logos(skip r"[ \t\n]+")]
@@ -9,6 +10,16 @@ pub enum Token {
     String,
 	#[regex(r"-?[0-9][0-9_]*(\.[0-9_]+)?([eE][\+-]?[0-9_]+)?", priority = 2)]
 	Number,
+
+	// keywords
+	#[token("let")]
+	Let,
+	#[token("if")]
+	If,
+	#[token("while")]
+	While,
+	#[token("for")]
+	For,
 
 
 	#[token(";")]
@@ -21,8 +32,42 @@ pub enum Token {
 	Plus,
 	#[token("-")]
 	Minus,
+	#[token(">=")]
+	Gte,
+	#[token("<=")]
+	Lte,
+	#[token("++")]
+	Increment,
+	#[token("--")]
+	Decrement,
+	#[token("::")]
+	DoubleColon,
+	#[token(":")]
+	Colon,
+	#[token("*")]
+	Asterisk,
+	#[token(".")]
+	Point,
+	#[token("(")]
+	LParen,
+	#[token(")")]
+	RParen,
+	#[token("[")]
+	LBracket,
+	#[token("]")]
+	RBracket,
+	#[token("{")]
+	LBrace,
+	#[token("}")]
+	RBrace,
+	#[token("<")]
+	LChevron,
+	#[token(">")]
+	RChevron
 }
 
+
+// TODO: add more tests
 #[cfg(test)]
 mod tests {
     use logos::Logos;
