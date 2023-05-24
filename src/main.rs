@@ -3,6 +3,7 @@
 #![allow(clippy::all)]
 #![allow(dead_code, unused_imports)]
 mod lexer;
+mod parser;
 
 use lexer::Token;
 use logos::Logos;
@@ -13,7 +14,10 @@ fn main(){
 	let var_2: number = abcd * 5;
 	let var3 = \"abcd\";
 	console.log(var3 + var_2 + abdc);
-
+	// abcd
+	/*
+	cihuchu
+	uch. */
 	if (abcd == 5) {
 		console.log(true)
 	}

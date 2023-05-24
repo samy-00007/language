@@ -1,14 +1,14 @@
-use logos::{Logos, Lexer};
+use logos::{Logos, Lexer, FilterResult};
 
 
 #[derive(Logos, Debug, PartialEq)]
 #[logos(skip r"[ \t\n]+")]
 pub enum Token {
-	#[regex("[A-Za-z_][A-Za-z_0-9]*")]
+	#[regex("[A-Za-z_][A-Za-z_0-9]*")] // TODO: maybe support unicode ?
 	Identifier,
 	#[regex(r#""([^"\\]|\\t|\\u|\\n|\\")*""#)]
     String,
-	#[regex(r"-?[0-9][0-9_]*(\.[0-9_]+)?([eE][\+-]?[0-9_]+)?", priority = 2)]
+	#[regex(r"-?[0-9][0-9_]*(\.[0-9_]+)?([eE][\+-]?[0-9_]+)?", priority = 2)] // TODO: expand that
 	Number,
 
 	// keywords
@@ -32,6 +32,10 @@ pub enum Token {
 	Plus,
 	#[token("-")]
 	Minus,
+	#[token("*")]
+	Asterisk,
+	#[token("/")]
+	Slash,
 	#[token(">=")]
 	Gte,
 	#[token("<=")]
@@ -44,8 +48,6 @@ pub enum Token {
 	DoubleColon,
 	#[token(":")]
 	Colon,
-	#[token("*")]
-	Asterisk,
 	#[token(".")]
 	Point,
 	#[token("(")]
@@ -63,7 +65,35 @@ pub enum Token {
 	#[token("<")]
 	LChevron,
 	#[token(">")]
-	RChevron
+	RChevron,
+	#[regex("//[^\n]*\n", logos::skip)]
+	Comment,
+	#[token("/*", block_comment)]
+	BlockComment,
+	//#[token("*/")]
+	//BlockCommentEnd
+	// TODO: doc comment
+}
+
+fn block_comment(lex: &mut Lexer<Token>) -> FilterResult<(), ()> {
+	// let _asterik = lex.find(|x| {
+	// 	println!("{:?}", x);
+	// 	match x {
+	// 	Ok(Token::BlockCommentEnd) => true,
+	// 	_ => false
+	// }});
+	let mut lex = lex.peekable();
+	loop {
+		lex.find(|x| match x {
+			Ok(Token::Asterisk) => true,
+			_ => false
+		});
+		match lex.peek() {
+			Some(Ok(Token::Slash)) => return FilterResult::Skip,
+			None => return FilterResult::Error(()),
+			_ => ()
+		}
+	}
 }
 
 
