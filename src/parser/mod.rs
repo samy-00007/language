@@ -123,6 +123,7 @@ where
 				| Token::LShift | Token::LShiftEq
 				| Token::RShift | Token::RShiftEq
 				| Token::Gte | Token::Lte
+				| Token::LChevron | Token::RChevron
 				| Token::Eq | Token::Neq
 				| Token::And | Token::AndEq
 				| Token::Or | Token::OrEq
