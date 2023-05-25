@@ -79,7 +79,7 @@ where
 				self.consume(Token::RParen)?;
 				expr
 			} else {
-				todo!("token '{:?}' unhandled (expression)", next);
+				return Err(ParseError::UnexpectedToken(next));
 			}
 		};
 
