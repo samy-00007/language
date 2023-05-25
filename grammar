@@ -1,0 +1,9 @@
+// inspired by rust reference https://doc.rust-lang.org/reference/statements.html
+
+operator = ...
+literal = <NUMBER> | <STRING> | true | false
+expression = 
+
+statement =
+
+LetStatement = let IDENT (: IDENT)? = expression ;
