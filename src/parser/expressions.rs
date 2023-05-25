@@ -101,3 +101,28 @@ where
 		}
 	}
 }
+
+
+#[cfg(test)]
+mod tests {
+    use crate::parser::{Parser, ast::{Expr, Literal}};
+
+	#[test]
+	fn parse_lit() {
+		let mut parser = Parser::new("5 3.5 \"abcd\" true false");
+		let expected = vec![
+			Expr::Lit(Literal::Int(5)),
+			Expr::Lit(Literal::Float((3.5).into())),
+			Expr::Lit(Literal::String(String::from("abcd"))),
+			Expr::Lit(Literal::Bool(true)),
+			Expr::Lit(Literal::Bool(false))
+		];
+		let mut parsed = Vec::new();
+		for _ in 0..5 {
+			let e = parser.parse_expression();
+			parsed.push(e);
+		}
+
+		assert_eq!(parsed, expected);
+	}
+}
