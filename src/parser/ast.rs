@@ -56,20 +56,74 @@ pub enum Prefix {
 #[derive(Debug, Clone, PartialEq, Copy)]
 pub enum Operator {
 	Plus,
-	Minus,
+	PlusEq,
+	Sub,
+	SubEq,
 	Mul,
+	MulEq,
 	Div,
-	Eq //FIXME:
+	DivEq,
+	Rem,
+	RemEq,
+
+	BitAnd,
+	BitAndEq,
+	BitOr,
+	BitOrEq,
+	Xor,
+	XorEq,
+	LShift,
+	LShiftEq,
+	RShift,
+	RShiftEq,
+
+	Eq,
+	Gt,
+	Gte,
+	Lt,
+	Lte,
+	Neq,
+	And,
+	AndEq,
+	Or,
+	OrEq
 }
 
 impl From<Token> for Operator {
 	fn from(value: Token) -> Self {
 		match value {
 			Token::Plus => Operator::Plus,
-			Token::Minus => Operator::Minus,
+			Token::PlusEq => Operator::PlusEq,
+			Token::Minus => Operator::Sub,
+			Token::MinusEq => Operator::SubEq,
 			Token::Asterisk => Operator::Mul,
+			Token::AsteriskEq => Operator::MulEq,
 			Token::Slash => Operator::Div,
+			Token::SlashEq => Operator::DivEq,
+			Token::Percent => Operator::Rem,
+			Token::PercentEq => Operator::RemEq,
+
+			Token::Anpersand => Operator::BitAnd,
+			Token::AnpersandEq => Operator::BitAndEq,
+			Token::Bar => Operator::BitOr,
+			Token::BarEq => Operator::BitOrEq,
+			Token::Caret => Operator::Xor,
+			Token::CaretEq => Operator::XorEq,
+			Token::LShift => Operator::LShift,
+			Token::LShiftEq => Operator::LShiftEq,
+			Token::RShift => Operator::RShift,
+			Token::RShiftEq => Operator::RShiftEq,
+
 			Token::Eq => Operator::Eq,
+			Token::Gte => Operator::Gte,
+			Token::Lte => Operator::Lte,
+			Token::Neq => Operator::Neq,
+			Token::And => Operator::And,
+			Token::AndEq => Operator::AndEq,
+			Token::Or => Operator::Or,
+			Token::OrEq => Operator::OrEq,
+			Token::RChevron => Operator::Lt,
+			Token::LChevron => Operator::Gt,
 			_ => panic!(
 				"Unexpected token while converting to operator: '{:?}'",
 				value
