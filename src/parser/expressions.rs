@@ -1,4 +1,4 @@
-use super::ast::{Block, Expr, Literal, Stmt};
+use super::ast::{Block, Expr, Literal, Stmt, ParseError};
 use super::{Parser, RetItem};
 use crate::lexer::Token;
 
@@ -6,25 +6,22 @@ impl<'a, I> Parser<'a, I>
 where
 	I: Iterator<Item = RetItem>
 {
-	fn parse_ident(&mut self) -> Expr {
+	fn parse_ident(&mut self) -> Result<Expr, ParseError> {
 		if self.at(Token::LParen) {
 			let name = self.text();
 			self.next();
 			let mut args = Vec::new();
 
 			while !self.at(Token::RParen) {
-				args.push(self.parse_expression());
+				args.push(self.parse_expression()?);
 				if self.at(Token::Comma) {
 					self.next();
-					if self.at(Token::RParen) {
-						panic!("Unexpected trailing comma") // TODO: change that
-					}
 				}
 			}
 			self.next();
-			Expr::FnCall { name, args }
+			Ok(Expr::FnCall { name, args })
 		} else {
-			Expr::Ident(self.text())
+			Ok(Expr::Ident(self.text()))
 		}
 	}
 
@@ -55,10 +52,10 @@ where
 		}
 	}
 
-	pub(super) fn parse_block(&mut self) -> Block {
+	pub(super) fn parse_block(&mut self) -> Result<Block, ParseError> {
 		let mut stmts = Vec::new();
 		while !matches!(self.peek(), Some(Token::RBrace) | None) {
-			let expr = self.parse_statement();
+			let expr = self.parse_statement()?;
 
 			if matches!(expr, Stmt::Return(_)) {
 				stmts.push(expr);
@@ -66,21 +63,20 @@ where
 			}
 			stmts.push(expr);
 		}
-		stmts
+		Ok(stmts)
 	}
 
-	pub fn parse_expression(&mut self) -> Expr {
-		let next = self.next();
-		assert!(next.is_some(), "Unexpected EOF");
-		let next = next.unwrap();
+	pub fn parse_expression(&mut self) -> Result<Expr, ParseError> {
+		let next = self.next().ok_or(ParseError::UnexpectedEOF)?;
+		
 		let lhs = {
 			if self.is_ident(next) {
-				self.parse_ident()
+				self.parse_ident()?
 			} else if self.is_lit(next) {
 				self.parse_lit(next)
 			} else if next == Token::LParen {
-				let expr = self.parse_expression();
-				self.consume(Token::RParen);
+				let expr = self.parse_expression()?;
+				self.consume(Token::RParen)?;
 				expr
 			} else {
 				todo!("token '{:?}' unhandled (expression)", next);
@@ -89,15 +85,15 @@ where
 
 		if self.is_next_op() {
 			let op = self.next().unwrap().into();
-			let rhs = self.parse_expression();
-			Expr::Infix {
+			let rhs = self.parse_expression()?;
+			Ok(Expr::Infix {
 				// FIXME: priorities
 				op,
 				lhs: Box::new(lhs),
 				rhs: Box::new(rhs)
-			}
+			})
 		} else {
-			lhs
+			Ok(lhs)
 		}
 	}
 }
@@ -118,9 +114,8 @@ mod tests {
 			Expr::Lit(Literal::Bool(false))
 		];
 		let mut parsed = Vec::new();
-		for _ in 0..5 {
-			let e = parser.parse_expression();
-			parsed.push(e);
+		while let Ok(x) = parser.parse_expression() {
+			parsed.push(x);
 		}
 
 		assert_eq!(parsed, expected);

@@ -77,3 +77,25 @@ impl From<Token> for Operator {
 		}
 	}
 }
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+#[allow(dead_code)]
+pub enum ParseError {
+	UnexpectedEOF,
+	UnexpectedToken(Token), // TODO: maybe store the token text ?
+	ExpectedButFoundInstead(Token, Token),
+	ExpectedButNotFound(Token)
+}
+
+impl std::fmt::Display for ParseError {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}",
+			match self {
+				Self::UnexpectedEOF => "Expected expression but found <EOF>".to_string(),
+				Self::UnexpectedToken(t) => format!("Unexpected token '{t:?}' found"),
+				Self::ExpectedButFoundInstead(a, b) => format!("Expected token '{a:?}' but found '{b:?}' instead"),
+				Self::ExpectedButNotFound(t) => format!("Expected token '{t:?}'")
+			}
+		)
+	}
+}

@@ -6,7 +6,7 @@ use crate::lexer::Token;
 use logos::{Logos, SpannedIter};
 use std::{iter::Peekable, ops::Range};
 
-use self::ast::Block;
+use self::ast::{Block, ParseError};
 
 pub(super) type RetItem = (Result<Token, ()>, Range<usize>);
 pub(super) type Item = (Token, Range<usize>);
@@ -80,22 +80,17 @@ where
 		self.source[self.range.to_owned()].to_string()
 	}
 
-	pub(self) fn consume(&mut self, expected: Token) {
-		let token = self.next();
-
-		assert!(
-			token.is_some(),
-			"Expected {:?} but found None (EOF)",
-			expected
-		);
-
-		let token = token.unwrap();
-
-		assert_eq!(
-			token, expected,
-			"Expected {:?} but found {:?}",
-			expected, token
-		);
+	pub(self) fn consume(&mut self, expected: Token) -> Result<(), ParseError> {
+		match self.next() {
+			Some(token) => {
+				if token == expected {
+					Ok(())
+				} else {
+					Err(ParseError::ExpectedButFoundInstead(expected, token))
+				}
+			},
+			None => Err(ParseError::UnexpectedEOF)
+		}
 	}
 
 	// utils
@@ -132,15 +127,18 @@ where
 		matches!(token, Token::Fn | Token::Let | Token::If | Token::For | Token::While)
 	}
 
-	pub(self) fn get_ident(&mut self) -> String {
-		let ident = self.next().expect("Expected identifier, found EOF");
-		assert_eq!(ident, Token::Identifier);
-		self.text()
+	pub(self) fn get_ident(&mut self) -> Result<String, ParseError> {
+		let ident = self.next().ok_or(ParseError::UnexpectedEOF)?;
+		if ident != Token::Identifier {
+			Err(ParseError::ExpectedButFoundInstead(Token::Identifier, ident))
+		} else {
+			Ok(self.text())
+		}
 	}
 
 	//
 
-	pub fn parse(&mut self) -> Block {
+	pub fn parse(&mut self) -> Result<Block, ParseError> {
 		self.parse_block()
 	}
 }
