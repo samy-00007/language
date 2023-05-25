@@ -41,7 +41,7 @@ pub enum Expr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Literal {
-	Int(u128),
+	Int(i128),
 	Float(f128), // TODO: test that
 	Bool(bool),
 	String(String)
@@ -122,8 +122,8 @@ impl From<Token> for Operator {
 			Token::AndEq => Operator::AndEq,
 			Token::Or => Operator::Or,
 			Token::OrEq => Operator::OrEq,
-			Token::RChevron => Operator::Lt,
-			Token::LChevron => Operator::Gt,
+			Token::RChevron => Operator::Gt,
+			Token::LChevron => Operator::Lt,
 			_ => panic!(
 				"Unexpected token while converting to operator: '{:?}'",
 				value

@@ -33,68 +33,68 @@ pub enum Token {
 	// operators
 	#[token("+")]
 	Plus,
-	#[token("+=")]
+	#[token("+=", priority = 2)]
 	PlusEq,
 	#[token("-")]
 	Minus,
-	#[token("-=")]
+	#[token("-=", priority = 2)]
 	MinusEq,
 	#[token("*")]
 	Asterisk,
-	#[token("*=")]
+	#[token("*=", priority = 2)]
 	AsteriskEq,
 	#[token("/")]
 	Slash,
-	#[token("/=")]
+	#[token("/=", priority = 2)]
 	SlashEq,
 	#[token("%")]
 	Percent,
-	#[token("%=")]
+	#[token("%=", priority = 2)]
 	PercentEq,
 	
 	// bitwise operations
 	#[token("&")]
 	Anpersand,
-	#[token("&=")]
+	#[token("&=", priority = 2)]
 	AnpersandEq,
 	#[token("|")]
 	Bar,
-	#[token("|=")]
+	#[token("|=", priority = 2)]
 	BarEq,
 	#[token("^")]
 	Caret,
-	#[token("^=")]
+	#[token("^=", priority = 2)]
 	CaretEq,
-	#[token("<<")]
+	#[token("<<", priority = 2)]
 	LShift,
-	#[token("<<=")]
+	#[token("<<=", priority = 3)]
 	LShiftEq,
-	#[token(">>")]
+	#[token(">>", priority = 2)]
 	RShift,
-	#[token(">>=")]
+	#[token(">>=", priority = 3)]
 	RShiftEq,
 	
 	// comparaison operator
-	#[token(">=")]
+	#[token(">=", priority = 2)]
 	Gte,
-	#[token("<=")]
+	#[token("<=", priority = 2)]
 	Lte,
-	#[token("==")]
+	#[token("==", priority = 2)]
 	Eq,
-	#[token("!=")]
+	#[token("!=", priority = 2)]
 	Neq,
-	#[token("&&")]
+	#[token("&&", priority = 2)]
 	And,
-	#[token("&&=")]
+	#[token("&&=", priority = 3)]
 	AndEq,
-	#[token("||")]
+	#[token("||", priority = 2)]
 	Or,
-	#[token("||=")]
+	#[token("||=", priority = 3)]
 	OrEq,
 	
-	#[token("++")]
+	#[token("++", priority = 2)]
 	Increment,
-	#[token("--")]
+	#[token("--", priority = 2)]
 	Decrement,
 	
 	
