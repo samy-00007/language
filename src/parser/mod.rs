@@ -128,6 +128,10 @@ where
 		}
 	}
 
+	pub(self) fn is_keyword(&self, token: Token) -> bool {
+		matches!(token, Token::Fn | Token::Let | Token::If | Token::For | Token::While)
+	}
+
 	pub(self) fn get_ident(&mut self) -> String {
 		let ident = self.next().expect("Expected identifier, found EOF");
 		assert_eq!(ident, Token::Identifier);

@@ -25,7 +25,8 @@ pub enum Stmt {
 		block: Block
 	},
 	Return(Expr),
-	Expr(Expr)
+	Expr(Expr),
+	FnReturn(Expr)
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -46,13 +47,13 @@ pub enum Literal {
 	String(String)
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Copy)]
 pub enum Prefix {
 	Not
 	// bitwise invert
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Copy)]
 pub enum Operator {
 	Plus,
 	Minus,

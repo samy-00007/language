@@ -9,7 +9,6 @@ where
 	I: Iterator<Item = RetItem>
 {
 	fn parse_let(&mut self) -> Stmt {
-		self.next();
 		let name = self.get_ident();
 
 		let mut t = None;
@@ -30,7 +29,6 @@ where
 	}
 
 	fn parse_fn(&mut self) -> Stmt {
-		self.next();
 		let name = self.get_ident();
 		self.consume(Token::LParen);
 
@@ -66,12 +64,19 @@ where
 
 	fn parse_expr(&mut self) -> Stmt {
 		let expr = self.parse_expression();
-		self.consume(Token::SemiColon);
-		Stmt::Expr(expr)
+		if !self.at(Token::SemiColon) {
+			if !self.at(Token::RBrace) {
+				panic!("Expected semicolon")
+			} else {
+				Stmt::Return(expr)
+			}
+		} else {
+			self.consume(Token::SemiColon);
+			Stmt::Expr(expr)
+		}
 	}
 
 	fn parse_if(&mut self) -> Stmt {
-		self.next();
 		self.consume(Token::LParen);
 		let cond = self.parse_expression();
 		self.consume(Token::RParen);
@@ -88,12 +93,17 @@ where
 		assert!(peek.is_some(), "Unexpected EOF");
 		let peek = peek.unwrap();
 
-		match peek {
-			Token::Let => self.parse_let(),
-			Token::Fn => self.parse_fn(),
-			Token::If => self.parse_if(),
-			Token::While | Token::For => panic!("Unhandled keyword"),
-			_ => self.parse_expr() // x => todo!("token '{:?}' unhandled (statement)", x)
+		if !self.is_keyword(peek) {
+			self.parse_expr()
+		} else {
+			self.next();
+			match peek {
+				Token::Let => self.parse_let(),
+				Token::Fn => self.parse_fn(),
+				Token::If => self.parse_if(),
+				// Token::While | Token::For => panic!("Unhandled keyword"),
+				x => todo!("token '{:?}' unhandled (statement)", x)
+			}
 		}
 	}
 }

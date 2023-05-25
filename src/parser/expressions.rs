@@ -1,4 +1,4 @@
-use super::ast::{Block, Expr, Literal};
+use super::ast::{Block, Expr, Literal, Stmt};
 use super::{Parser, RetItem};
 use crate::lexer::Token;
 
@@ -58,7 +58,13 @@ where
 	pub(super) fn parse_block(&mut self) -> Block {
 		let mut stmts = Vec::new();
 		while !matches!(self.peek(), Some(Token::RBrace) | None) {
-			stmts.push(self.parse_statement()); // TODO: handle returning of expression like in rust
+			let expr = self.parse_statement();
+
+			if matches!(expr, Stmt::Return(_)) {
+				stmts.push(expr);
+				break
+			}
+			stmts.push(expr);
 		}
 		stmts
 	}
