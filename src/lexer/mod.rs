@@ -30,30 +30,80 @@ pub enum Token {
 	#[token("false")]
 	False,
 
+	// operators
+	#[token("+")]
+	Plus,
+	#[token("+=")]
+	PlusEq,
+	#[token("-")]
+	Minus,
+	#[token("-=")]
+	MinusEq,
+	#[token("*")]
+	Asterisk,
+	#[token("*=")]
+	AsteriskEq,
+	#[token("/")]
+	Slash,
+	#[token("/=")]
+	SlashEq,
+	#[token("%")]
+	Percent,
+	#[token("%=")]
+	PercentEq,
+	
+	// bitwise operations
+	#[token("&")]
+	Anpersand,
+	#[token("&=")]
+	AnpersandEq,
+	#[token("|")]
+	Bar,
+	#[token("|=")]
+	BarEq,
+	#[token("^")]
+	Caret,
+	#[token("^=")]
+	CaretEq,
+	#[token("<<")]
+	LShift,
+	#[token("<<=")]
+	LShiftEq,
+	#[token(">>")]
+	RShift,
+	#[token(">>=")]
+	RShiftEq,
+	
+	// comparaison operator
+	#[token(">=")]
+	Gte,
+	#[token("<=")]
+	Lte,
+	#[token("==")]
+	Eq,
+	#[token("!=")]
+	Neq,
+	#[token("&&")]
+	And,
+	#[token("&&=")]
+	AndEq,
+	#[token("||")]
+	Or,
+	#[token("||=")]
+	OrEq,
+	
+	#[token("++")]
+	Increment,
+	#[token("--")]
+	Decrement,
+	
+	
 	#[token(";")]
 	SemiColon,
 	#[token(",")]
 	Comma,
 	#[token("=")]
 	Assign,
-	#[token("==")]
-	Eq,
-	#[token("+")]
-	Plus,
-	#[token("-")]
-	Minus,
-	#[token("*")]
-	Asterisk,
-	#[token("/")]
-	Slash,
-	#[token(">=")]
-	Gte,
-	#[token("<=")]
-	Lte,
-	#[token("++")]
-	Increment,
-	#[token("--")]
-	Decrement,
 	#[token("::")]
 	DoubleColon,
 	#[token(":")]

@@ -88,7 +88,7 @@ where
 				} else {
 					Err(ParseError::ExpectedButFoundInstead(expected, token))
 				}
-			},
+			}
 			None => Err(ParseError::UnexpectedEOF)
 		}
 	}
@@ -110,7 +110,22 @@ where
 		// TODO: expand that
 		matches!(
 			token,
-			Token::Plus | Token::Minus | Token::Asterisk | Token::Slash | Token::Eq
+			Token::Plus
+				| Token::PlusEq | Token::Minus
+				| Token::MinusEq | Token::Asterisk
+				| Token::AsteriskEq
+				| Token::Slash | Token::SlashEq
+				| Token::Percent | Token::PercentEq
+				| Token::Anpersand
+				| Token::AnpersandEq
+				| Token::Bar | Token::BarEq
+				| Token::Caret | Token::CaretEq
+				| Token::LShift | Token::LShiftEq
+				| Token::RShift | Token::RShiftEq
+				| Token::Gte | Token::Lte
+				| Token::Eq | Token::Neq
+				| Token::And | Token::AndEq
+				| Token::Or | Token::OrEq
 		)
 	}
 
@@ -124,13 +139,19 @@ where
 	}
 
 	pub(self) fn is_keyword(&self, token: Token) -> bool {
-		matches!(token, Token::Fn | Token::Let | Token::If | Token::For | Token::While)
+		matches!(
+			token,
+			Token::Fn | Token::Let | Token::If | Token::For | Token::While
+		)
 	}
 
 	pub(self) fn get_ident(&mut self) -> Result<String, ParseError> {
 		let ident = self.next().ok_or(ParseError::UnexpectedEOF)?;
 		if ident != Token::Identifier {
-			Err(ParseError::ExpectedButFoundInstead(Token::Identifier, ident))
+			Err(ParseError::ExpectedButFoundInstead(
+				Token::Identifier,
+				ident
+			))
 		} else {
 			Ok(self.text())
 		}
