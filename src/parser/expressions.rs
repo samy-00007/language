@@ -101,17 +101,104 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::parser::{Parser, ast::{Expr, Literal}};
+    use crate::parser::{Parser, ast::{Expr, Literal, Operator, ParseError}};
+
+	#[test]
+	fn parse_float() {
+		let mut parser = Parser::new("3.5 4.7 7.2");
+		while let Ok(x) = parser.parse_expression() {
+			// can't compare them precisely because they're floats
+			assert!(matches!(x, Expr::Lit(Literal::Float(_)))); 
+		}
+	}
 
 	#[test]
 	fn parse_lit() {
-		let mut parser = Parser::new("5 3.5 \"abcd\" true false");
+		let mut parser = Parser::new("5 \"abcd\" true false");
 		let expected = vec![
 			Expr::Lit(Literal::Int(5)),
-			Expr::Lit(Literal::Float((3.5).into())),
 			Expr::Lit(Literal::String(String::from("abcd"))),
 			Expr::Lit(Literal::Bool(true)),
 			Expr::Lit(Literal::Bool(false))
+		];
+		let mut parsed = Vec::new();
+		while let Ok(x) = parser.parse_expression() {
+			parsed.push(x);
+		}
+
+		assert_eq!(parsed, expected);
+	}
+
+	#[test]
+	fn parse_ident() {
+		let mut parser = Parser::new("abcd print(5) test");
+		let expected = vec![
+			Expr::Ident("abcd".to_string()),
+			Expr::FnCall {
+				name: "print".to_string(),
+				args: vec![Expr::Lit(Literal::Int(5))]
+			},
+			Expr::Ident("test".to_string()),
+		];
+		let mut parsed = Vec::new();
+		while let Ok(x) = parser.parse_expression() {
+			parsed.push(x);
+		}
+
+		assert_eq!(parsed, expected);
+	}
+
+	#[test]
+	#[allow(clippy::just_underscores_and_digits)]
+	fn parse_ops() {
+		let mut parser = Parser::new("5+5 6*7 5^3 4-8 4/8 8!=4 5==5 6>3 4>=4 1<5 6<=test 4*4*4");
+		let f = |n| Box::new(Expr::Lit(Literal::Int(n)));
+
+		let _1 = f(1);
+		let _3 = f(3);
+		let _4 = f(4);
+		let _5 = f(5);
+		let _6 = f(6);
+		let _7 = f(7);
+		let _8 = f(8);
+
+		let expected = vec![
+			Expr::Infix { op: Operator::Plus, lhs: _5.clone(), rhs: _5.clone() },
+			Expr::Infix { op: Operator::Mul, lhs: _6.clone(), rhs: _7 },
+			Expr::Infix { op: Operator::Xor, lhs: _5.clone(), rhs: _3.clone() },
+			Expr::Infix { op: Operator::Sub, lhs: _4.clone(), rhs: _8.clone() },
+			Expr::Infix { op: Operator::Div, lhs: _4.clone(), rhs: _8.clone() },
+			Expr::Infix { op: Operator::Neq, lhs: _8, rhs: _4.clone() },
+			Expr::Infix { op: Operator::Eq, lhs: _5.clone(), rhs: _5.clone() },
+			Expr::Infix { op: Operator::Gt, lhs: _6.clone(), rhs: _3 },
+			Expr::Infix { op: Operator::Gte, lhs: _4.clone(), rhs: _4.clone() },
+			Expr::Infix { op: Operator::Lt, lhs: _1, rhs: _5 },
+			Expr::Infix { op: Operator::Lte, lhs: _6, rhs: Box::new(Expr::Ident("test".to_string())) },
+			Expr::Infix { op: Operator::Mul, lhs: Box::new(Expr::Infix { op: Operator::Mul, lhs: _4.clone(), rhs: _4.clone() }), rhs: _4 }
+		];
+		let mut parsed = Vec::new();
+		loop {
+			let x = parser.parse_expression();
+			match x {
+				Ok(x) => parsed.push(x),
+				Err(ParseError::UnexpectedEOF) => break,
+				Err(x) => {
+					eprintln!("{}", x);
+					eprintln!("{:?}", parser.range);
+					panic!()
+				}
+			
+			}
+		}
+
+		assert_eq!(parsed, expected);
+	}
+
+	#[test]
+	fn parse_priority() {
+		let mut parser = Parser::new("6*7*5  3*5 + 5*5  7*7*7+3 6/7*8-2  a & b & c  a && b && c");
+		let expected = vec![
+			
 		];
 		let mut parsed = Vec::new();
 		while let Ok(x) = parser.parse_expression() {
