@@ -1,12 +1,12 @@
-use super::ast::{Block, Expr, Literal, Stmt, ParseError};
-use super::{Parser, RetItem};
+use super::ast::{Block, Expr, Literal, ParseError, Stmt};
+use super::{PResult, Parser, RetItem};
 use crate::lexer::Token;
 
 impl<'a, I> Parser<'a, I>
 where
 	I: Iterator<Item = RetItem>
 {
-	fn parse_ident(&mut self) -> Result<Expr, ParseError> {
+	fn parse_ident(&mut self) -> PResult<Expr> {
 		if self.at(Token::LParen) {
 			let name = self.text();
 			self.next();
@@ -19,7 +19,7 @@ where
 				}
 			}
 			self.next();
-			Ok(Expr::FnCall { name, args })
+			Ok(Expr::FnNamedCall { name, args })
 		} else {
 			Ok(Expr::Ident(self.text()))
 		}
@@ -52,23 +52,74 @@ where
 		}
 	}
 
-	pub(super) fn parse_block(&mut self) -> Result<Block, ParseError> {
+	pub(super) fn parse_block(&mut self) -> PResult<Block> {
 		let mut stmts = Vec::new();
 		while !matches!(self.peek(), Some(Token::RBrace) | None) {
 			let expr = self.parse_statement()?;
 
 			if matches!(expr, Stmt::Return(_)) {
 				stmts.push(expr);
-				break
+				break;
 			}
 			stmts.push(expr);
 		}
 		Ok(stmts)
 	}
 
-	pub fn parse_expression(&mut self) -> Result<Expr, ParseError> {
+	/// Parse a list of expression / arguments
+	/// It does not consume `end_token`
+	///
+	/// Example of list that it parses:
+	/// ```
+	/// // self.parse_list(true, Token::RParen)
+	/// ident1: type1, ident2: type2, ident3: type3
+	///
+	/// ```
+	// FIXME: parse something else than ident, like `object.property`
+	pub(super) fn parse_fn_args(&mut self, end_token: Token) -> PResult<Vec<(String, String)>> {
+		let mut args = Vec::new();
+		while !self.at(end_token) {
+			let arg = self.get_ident()?;
+			self.consume(Token::Colon)?;
+			let t = self.get_ident()?;
+			args.push((arg, t));
+			if self.at(Token::Comma) {
+				self.next();
+			}
+		}
+		Ok(args)
+	}
+
+	pub(super) fn parse_list(&mut self, only_idents: bool, end_token: Token) -> PResult<Vec<Expr>> {
+		let mut args = Vec::new();
+		while !self.at(end_token) {
+			let arg = self.parse_expression()?;
+			if only_idents && !matches!(arg, Expr::Ident(_)) {
+				return Err(ParseError::ExpectedExprButFoundInstead(
+					Expr::Ident("".to_string()),
+					arg
+				));
+			}
+			args.push(arg);
+			if self.at(Token::Comma) {
+				self.next();
+			}
+		}
+		Ok(args)
+	}
+
+	pub fn parse_fn_call(&mut self, lhs: Expr) -> PResult<Expr> {
+		self.next(); // known to be Token::LParen
+		let args = self.parse_list(true, Token::RParen)?;
+		Ok(Expr::FnCall {
+			expr: Box::new(lhs),
+			args
+		})
+	}
+
+	pub fn parse_expression(&mut self) -> PResult<Expr> {
 		let next = self.next().ok_or(ParseError::UnexpectedEOF)?;
-		
+
 		let lhs = {
 			if self.is_ident(next) {
 				self.parse_ident()?
@@ -78,37 +129,94 @@ where
 				let expr = self.parse_expression()?;
 				self.consume(Token::RParen)?;
 				expr
+			} else if next == Token::LBrace {
+				let blk = self.parse_block()?;
+				self.consume(Token::RBrace)?;
+				Expr::Block(blk)
 			} else {
 				return Err(ParseError::UnexpectedToken(next));
 			}
 		};
 
-		if self.is_next_op() {
-			let op = self.next().unwrap().into();
-			let rhs = self.parse_expression()?;
-			Ok(Expr::Infix {
-				// FIXME: priorities
-				op,
-				lhs: Box::new(lhs),
-				rhs: Box::new(rhs)
-			})
+		if let Some(peek) = self.peek() {
+			if self.is_op(peek) {
+				let op = self.next().unwrap().into();
+				let rhs = self.parse_expression()?;
+				Ok(Expr::Infix {
+					// FIXME: priorities
+					op,
+					lhs: Box::new(lhs),
+					rhs: Box::new(rhs)
+				})
+			} else if peek == Token::LParen {
+				self.parse_fn_call(lhs)
+			} else {
+				Ok(lhs)
+			}
 		} else {
 			Ok(lhs)
 		}
 	}
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::parser::{Parser, ast::{Expr, Literal, Operator, ParseError}};
+	use crate::{
+		lexer::Token,
+		parser::{
+			ast::{Expr, Literal, Operator, ParseError, Stmt},
+			Parser
+		}
+	};
+
+	#[test]
+	fn parse_args() {
+		let mut parser = Parser::new("abcd, efgh, uch65)");
+		let args = parser.parse_list(true, Token::RParen).unwrap();
+		assert_eq!(
+			args,
+			vec![
+				Expr::Ident("abcd".to_string()),
+				Expr::Ident("efgh".to_string()),
+				Expr::Ident("uch65".to_string())
+			]
+		);
+
+		let mut parser = Parser::new("5, {print(\"test\"); 5}, abcd)");
+		let args = parser.parse_list(false, Token::RParen).unwrap();
+		assert_eq!(
+			args,
+			vec![
+				Expr::Lit(Literal::Int(5)),
+				Expr::Block(vec![
+					Stmt::Expr(Expr::FnNamedCall {
+						name: "print".to_string(),
+						args: vec![Expr::Lit(Literal::String("test".to_string()))]
+					}),
+					Stmt::Return(Expr::Lit(Literal::Int(5)))
+				]),
+				Expr::Ident("abcd".to_string())
+			]
+		);
+
+		let mut parser = Parser::new("abcd: number, efgh: bool, uch65: string)");
+		let args = parser.parse_fn_args(Token::RParen).unwrap();
+		assert_eq!(
+			args,
+			vec![
+				("abcd".to_string(), "number".to_string()),
+				("efgh".to_string(), "bool".to_string()),
+				("uch65".to_string(), "string".to_string())
+			]
+		);
+	}
 
 	#[test]
 	fn parse_float() {
 		let mut parser = Parser::new("3.5 4.7 7.2");
 		while let Ok(x) = parser.parse_expression() {
 			// can't compare them precisely because they're floats
-			assert!(matches!(x, Expr::Lit(Literal::Float(_)))); 
+			assert!(matches!(x, Expr::Lit(Literal::Float(_))));
 		}
 	}
 
@@ -119,7 +227,7 @@ mod tests {
 			Expr::Lit(Literal::Int(5)),
 			Expr::Lit(Literal::String(String::from("abcd"))),
 			Expr::Lit(Literal::Bool(true)),
-			Expr::Lit(Literal::Bool(false))
+			Expr::Lit(Literal::Bool(false)),
 		];
 		let mut parsed = Vec::new();
 		while let Ok(x) = parser.parse_expression() {
@@ -134,7 +242,7 @@ mod tests {
 		let mut parser = Parser::new("abcd print(5) test");
 		let expected = vec![
 			Expr::Ident("abcd".to_string()),
-			Expr::FnCall {
+			Expr::FnNamedCall {
 				name: "print".to_string(),
 				args: vec![Expr::Lit(Literal::Int(5))]
 			},
@@ -163,18 +271,70 @@ mod tests {
 		let _8 = f(8);
 
 		let expected = vec![
-			Expr::Infix { op: Operator::Plus, lhs: _5.clone(), rhs: _5.clone() },
-			Expr::Infix { op: Operator::Mul, lhs: _6.clone(), rhs: _7 },
-			Expr::Infix { op: Operator::Xor, lhs: _5.clone(), rhs: _3.clone() },
-			Expr::Infix { op: Operator::Sub, lhs: _4.clone(), rhs: _8.clone() },
-			Expr::Infix { op: Operator::Div, lhs: _4.clone(), rhs: _8.clone() },
-			Expr::Infix { op: Operator::Neq, lhs: _8, rhs: _4.clone() },
-			Expr::Infix { op: Operator::Eq, lhs: _5.clone(), rhs: _5.clone() },
-			Expr::Infix { op: Operator::Gt, lhs: _6.clone(), rhs: _3 },
-			Expr::Infix { op: Operator::Gte, lhs: _4.clone(), rhs: _4.clone() },
-			Expr::Infix { op: Operator::Lt, lhs: _1, rhs: _5 },
-			Expr::Infix { op: Operator::Lte, lhs: _6, rhs: Box::new(Expr::Ident("test".to_string())) },
-			Expr::Infix { op: Operator::Mul, lhs: Box::new(Expr::Infix { op: Operator::Mul, lhs: _4.clone(), rhs: _4.clone() }), rhs: _4 }
+			Expr::Infix {
+				op: Operator::Add,
+				lhs: _5.clone(),
+				rhs: _5.clone()
+			},
+			Expr::Infix {
+				op: Operator::Mul,
+				lhs: _6.clone(),
+				rhs: _7
+			},
+			Expr::Infix {
+				op: Operator::BitXor,
+				lhs: _5.clone(),
+				rhs: _3.clone()
+			},
+			Expr::Infix {
+				op: Operator::Sub,
+				lhs: _4.clone(),
+				rhs: _8.clone()
+			},
+			Expr::Infix {
+				op: Operator::Div,
+				lhs: _4.clone(),
+				rhs: _8.clone()
+			},
+			Expr::Infix {
+				op: Operator::Neq,
+				lhs: _8,
+				rhs: _4.clone()
+			},
+			Expr::Infix {
+				op: Operator::Eq,
+				lhs: _5.clone(),
+				rhs: _5.clone()
+			},
+			Expr::Infix {
+				op: Operator::Gt,
+				lhs: _6.clone(),
+				rhs: _3
+			},
+			Expr::Infix {
+				op: Operator::Gte,
+				lhs: _4.clone(),
+				rhs: _4.clone()
+			},
+			Expr::Infix {
+				op: Operator::Lt,
+				lhs: _1,
+				rhs: _5
+			},
+			Expr::Infix {
+				op: Operator::Lte,
+				lhs: _6,
+				rhs: Box::new(Expr::Ident("test".to_string()))
+			},
+			Expr::Infix {
+				op: Operator::Mul,
+				lhs: Box::new(Expr::Infix {
+					op: Operator::Mul,
+					lhs: _4.clone(),
+					rhs: _4.clone()
+				}),
+				rhs: _4
+			},
 		];
 		let mut parsed = Vec::new();
 		loop {
@@ -187,7 +347,6 @@ mod tests {
 					eprintln!("{:?}", parser.range);
 					panic!()
 				}
-			
 			}
 		}
 
@@ -197,9 +356,7 @@ mod tests {
 	#[test]
 	fn parse_priority() {
 		let mut parser = Parser::new("6*7*5  3*5 + 5*5  7*7*7+3 6/7*8-2  a & b & c  a && b && c");
-		let expected = vec![
-			
-		];
+		let expected = vec![];
 		let mut parsed = Vec::new();
 		while let Ok(x) = parser.parse_expression() {
 			parsed.push(x);

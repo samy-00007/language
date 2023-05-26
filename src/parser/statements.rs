@@ -1,12 +1,12 @@
-use super::ast::{Stmt, ParseError};
-use super::{Parser, RetItem};
+use super::ast::{ParseError, Stmt};
+use super::{PResult, Parser, RetItem};
 use crate::lexer::Token;
 
 impl<'a, I> Parser<'a, I>
 where
 	I: Iterator<Item = RetItem>
 {
-	fn parse_let(&mut self) -> Result<Stmt, ParseError> {
+	fn parse_let(&mut self) -> PResult<Stmt> {
 		let name = self.get_ident()?;
 
 		let mut t = None;
@@ -26,21 +26,12 @@ where
 		})
 	}
 
-	fn parse_fn(&mut self) -> Result<Stmt, ParseError> {
+	fn parse_fn_stmt(&mut self) -> PResult<Stmt> {
 		let name = self.get_ident()?;
 		self.consume(Token::LParen)?;
 
-		let mut args = Vec::new();
-		while !self.at(Token::RParen) {
-			let arg_name = self.get_ident()?;
-			self.consume(Token::Colon)?;
-			let t = self.get_ident()?;
-			args.push((arg_name, t));
-
-			if self.at(Token::Comma) {
-				self.next();
-			}
-		}
+		let args = self.parse_fn_args(Token::RParen)?;
+		self.next(); // Token::RParen
 
 		self.consume(Token::Colon)?;
 		let t = self.get_ident()?;
@@ -57,11 +48,11 @@ where
 		})
 	}
 
-	fn parse_expr(&mut self) -> Result<Stmt, ParseError> {
+	fn parse_expr(&mut self) -> PResult<Stmt> {
 		let expr = self.parse_expression()?;
 		if !self.at(Token::SemiColon) {
 			if !self.at(Token::RBrace) {
-				Err(ParseError::ExpectedButNotFound(Token::RBrace))
+				Err(ParseError::ExpectedTokenButNotFound(Token::RBrace))
 			} else {
 				Ok(Stmt::Return(expr))
 			}
@@ -71,7 +62,7 @@ where
 		}
 	}
 
-	fn parse_if(&mut self) -> Result<Stmt, ParseError> {
+	fn parse_if(&mut self) -> PResult<Stmt> {
 		self.consume(Token::LParen)?;
 		let cond = self.parse_expression()?;
 		self.consume(Token::RParen)?;
@@ -83,7 +74,7 @@ where
 		Ok(Stmt::If { cond, block })
 	}
 
-	pub fn parse_statement(&mut self) -> Result<Stmt, ParseError> {
+	pub fn parse_statement(&mut self) -> PResult<Stmt> {
 		let peek = self.peek();
 		assert!(peek.is_some(), "Unexpected EOF");
 		let peek = peek.unwrap();
@@ -94,7 +85,7 @@ where
 			self.next();
 			match peek {
 				Token::Let => self.parse_let(),
-				Token::Fn => self.parse_fn(),
+				Token::Fn => self.parse_fn_stmt(),
 				Token::If => self.parse_if(),
 				// Token::While | Token::For => panic!("Unhandled keyword"),
 				x => todo!("token '{:?}' unhandled (statement)", x)
