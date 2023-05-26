@@ -6,10 +6,11 @@ use crate::lexer::Token;
 use logos::{Logos, SpannedIter};
 use std::{iter::Peekable, ops::Range};
 
-use self::ast::{Block, ParseError};
+use self::ast::{Block, ParseError, Operator};
 
 pub(super) type RetItem = (Result<Token, ()>, Range<usize>);
 pub(super) type Item = (Token, Range<usize>);
+pub(super) type PResult<T> = Result<T, ParseError>;
 
 pub struct Parser<'a, I>
 where
@@ -80,13 +81,13 @@ where
 		self.source[self.range.to_owned()].to_string()
 	}
 
-	pub(self) fn consume(&mut self, expected: Token) -> Result<(), ParseError> {
+	pub(self) fn consume(&mut self, expected: Token) -> PResult<()> {
 		match self.next() {
 			Some(token) => {
 				if token == expected {
 					Ok(())
 				} else {
-					Err(ParseError::ExpectedButFoundInstead(expected, token))
+					Err(ParseError::ExpectedTokenButFoundInstead(expected, token))
 				}
 			}
 			None => Err(ParseError::UnexpectedEOF)
@@ -116,7 +117,7 @@ where
 				| Token::AsteriskEq
 				| Token::Slash | Token::SlashEq
 				| Token::Percent | Token::PercentEq
-				| Token::Anpersand
+				| Token::Anpersand | Token::ExclamationMark
 				| Token::AnpersandEq
 				| Token::Bar | Token::BarEq
 				| Token::Caret | Token::CaretEq
@@ -127,6 +128,7 @@ where
 				| Token::Eq | Token::Neq
 				| Token::And | Token::AndEq
 				| Token::Or | Token::OrEq
+				| Token::Tilde | Token::TildeEq
 		)
 	}
 
@@ -146,10 +148,10 @@ where
 		)
 	}
 
-	pub(self) fn get_ident(&mut self) -> Result<String, ParseError> {
+	pub(self) fn get_ident(&mut self) -> PResult<String> {
 		let ident = self.next().ok_or(ParseError::UnexpectedEOF)?;
 		if ident != Token::Identifier {
-			Err(ParseError::ExpectedButFoundInstead(
+			Err(ParseError::ExpectedTokenButFoundInstead(
 				Token::Identifier,
 				ident
 			))
@@ -158,9 +160,29 @@ where
 		}
 	}
 
+	pub(self) fn operator_precedence(&self, op: Operator) -> usize {
+		// https://en.wikipedia.org/wiki/Order_of_operations#Programming_languages
+		type Op = Operator;
+		match op {
+			Op::Not | Op::BitNot => 12,
+			Op::Exponent => 11,
+			Op::Mul | Op::Div | Op::Rem => 10,
+			Op::Add | Op::Sub  => 9,
+			Op::LShift | Op::RShift => 8,
+			Op::Lt | Op::Lte | Op::Gt | Op::Gte => 7,
+			Op::Eq | Op::Neq => 6,
+			Op::BitAnd => 5,
+			Op::BitXor => 4,
+			Op::BitOr => 3,
+			Op::And => 2,
+			Op::Or => 1,
+			_ => 0
+		}
+	}
+
 	//
 
-	pub fn parse(&mut self) -> Result<Block, ParseError> {
+	pub fn parse(&mut self) -> PResult<Block> {
 		self.parse_block()
 	}
 }

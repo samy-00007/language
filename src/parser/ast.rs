@@ -29,14 +29,15 @@ pub enum Stmt {
 	FnReturn(Expr)
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
 	Ident(String),
 	Lit(Literal),
 	Prefix(Prefix, E),
 	Infix { op: Operator, lhs: E, rhs: E },
 	Block(Block), // FIXME: handle statements in there
-	FnCall { name: String, args: Vec<Expr> }
+	FnCall { expr: E, args: Vec<Expr> },
+	FnNamedCall { name: String, args: Vec<Expr> }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -49,29 +50,33 @@ pub enum Literal {
 
 #[derive(Debug, Clone, PartialEq, Copy)]
 pub enum Prefix {
-	Not
-	// bitwise invert
+	Not // bitwise invert
 }
 
 #[derive(Debug, Clone, PartialEq, Copy)]
 pub enum Operator {
-	Plus,
-	PlusEq,
+	Add,
+	AddEq,
 	Sub,
 	SubEq,
 	Mul,
 	MulEq,
+	Exponent,
+	ExponentEq,
 	Div,
 	DivEq,
 	Rem,
 	RemEq,
+	Not,
 
 	BitAnd,
 	BitAndEq,
 	BitOr,
 	BitOrEq,
-	Xor,
-	XorEq,
+	BitNot,
+	BitNotEq,
+	BitXor,
+	BitXorEq,
 	LShift,
 	LShiftEq,
 	RShift,
@@ -92,23 +97,28 @@ pub enum Operator {
 impl From<Token> for Operator {
 	fn from(value: Token) -> Self {
 		match value {
-			Token::Plus => Operator::Plus,
-			Token::PlusEq => Operator::PlusEq,
+			Token::Plus => Operator::Add,
+			Token::PlusEq => Operator::AddEq,
 			Token::Minus => Operator::Sub,
 			Token::MinusEq => Operator::SubEq,
 			Token::Asterisk => Operator::Mul,
 			Token::AsteriskEq => Operator::MulEq,
+			Token::DoubleAsterisk => Operator::Exponent,
+			Token::DoubleAsteriskEq => Operator::ExponentEq,
 			Token::Slash => Operator::Div,
 			Token::SlashEq => Operator::DivEq,
 			Token::Percent => Operator::Rem,
 			Token::PercentEq => Operator::RemEq,
+			Token::ExclamationMark => Operator::Not,
 
+			Token::Tilde => Operator::BitNot,
+			Token::TildeEq => Operator::BitNotEq,
 			Token::Anpersand => Operator::BitAnd,
 			Token::AnpersandEq => Operator::BitAndEq,
 			Token::Bar => Operator::BitOr,
 			Token::BarEq => Operator::BitOrEq,
-			Token::Caret => Operator::Xor,
-			Token::CaretEq => Operator::XorEq,
+			Token::Caret => Operator::BitXor,
+			Token::CaretEq => Operator::BitXorEq,
 			Token::LShift => Operator::LShift,
 			Token::LShiftEq => Operator::LShiftEq,
 			Token::RShift => Operator::RShift,
@@ -132,23 +142,30 @@ impl From<Token> for Operator {
 	}
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone)]
 #[allow(dead_code)]
 pub enum ParseError {
 	UnexpectedEOF,
 	UnexpectedToken(Token), // TODO: maybe store the token text ?
-	ExpectedButFoundInstead(Token, Token),
-	ExpectedButNotFound(Token)
+	ExpectedTokenButFoundInstead(Token, Token),
+	ExpectedTokenButNotFound(Token),
+	ExpectedExprButFoundInstead(Expr, Expr),
+	ExpectedExprButNotFound(Expr)
 }
 
 impl std::fmt::Display for ParseError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(f, "{}",
+		write!(
+			f,
+			"{}",
 			match self {
 				Self::UnexpectedEOF => "Expected expression but found <EOF>".to_string(),
 				Self::UnexpectedToken(t) => format!("Unexpected token '{t:?}' found"),
-				Self::ExpectedButFoundInstead(a, b) => format!("Expected token '{a:?}' but found '{b:?}' instead"),
-				Self::ExpectedButNotFound(t) => format!("Expected token '{t:?}'")
+				Self::ExpectedTokenButFoundInstead(a, b) =>
+					format!("Expected token '{a:?}' but found '{b:?}' instead"),
+				Self::ExpectedTokenButNotFound(t) => format!("Expected token '{t:?}'"),
+				Self::ExpectedExprButFoundInstead(a, b) => format!("Expected expression '{a:?}' but found '{b:?}' instead"),
+				Self::ExpectedExprButNotFound(t) => format!("Expected expression '{t:?}'")
 			}
 		)
 	}

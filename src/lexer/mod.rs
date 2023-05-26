@@ -43,6 +43,10 @@ pub enum Token {
 	Asterisk,
 	#[token("*=", priority = 2)]
 	AsteriskEq,
+	#[token("**")]
+	DoubleAsterisk,
+	#[token("**=", priority = 2)]
+	DoubleAsteriskEq,
 	#[token("/")]
 	Slash,
 	#[token("/=", priority = 2)]
@@ -51,7 +55,7 @@ pub enum Token {
 	Percent,
 	#[token("%=", priority = 2)]
 	PercentEq,
-	
+
 	// bitwise operations
 	#[token("&")]
 	Anpersand,
@@ -73,7 +77,7 @@ pub enum Token {
 	RShift,
 	#[token(">>=", priority = 3)]
 	RShiftEq,
-	
+
 	// comparaison operator
 	#[token(">=", priority = 2)]
 	Gte,
@@ -91,13 +95,12 @@ pub enum Token {
 	Or,
 	#[token("||=", priority = 3)]
 	OrEq,
-	
+
 	#[token("++", priority = 2)]
 	Increment,
 	#[token("--", priority = 2)]
 	Decrement,
-	
-	
+
 	#[token(";")]
 	SemiColon,
 	#[token(",")]
@@ -126,11 +129,16 @@ pub enum Token {
 	LChevron,
 	#[token(">")]
 	RChevron,
+	#[token("!")]
+	ExclamationMark,
+	#[token("~")]
+	Tilde,
+	#[token("~=")]
+	TildeEq,
 	#[regex("//[^\n]*\n", logos::skip)]
 	Comment,
 	#[token("/*", block_comment)]
-	BlockComment
-	// TODO: doc comment
+	BlockComment // TODO: doc comment
 }
 
 fn block_comment(lex: &mut Lexer<Token>) -> FilterResult<(), ()> {
