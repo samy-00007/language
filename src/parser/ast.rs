@@ -170,7 +170,7 @@ impl Display for Literal {
 			Self::Bool(x) => x.to_string(),
 			Self::Float(x) => x.to_string(),
 			Self::Int(x) => x.to_string(),
-			Self::String(x) => x.to_string()
+			Self::String(x) => format!("\"{}\"", x)
 		};
 		write!(f, "{}", res)
 	}
