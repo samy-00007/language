@@ -132,15 +132,6 @@ where
 		)
 	}
 
-	pub(self) fn is_next_op(&mut self) -> bool {
-		let peek = self.peek();
-		if let Some(token) = peek {
-			self.is_op(token)
-		} else {
-			false
-		}
-	}
-
 	pub(self) fn is_keyword(&self, token: Token) -> bool {
 		matches!(
 			token,
