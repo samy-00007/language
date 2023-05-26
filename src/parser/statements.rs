@@ -17,7 +17,7 @@ where
 		}
 
 		self.consume(Token::Assign)?; // TODO: variable without initial value
-		let expr = self.parse_expression()?;
+		let expr = self.parse_expression(0)?;
 		self.consume(Token::SemiColon)?;
 		Ok(Stmt::Local {
 			name,
@@ -49,7 +49,7 @@ where
 	}
 
 	fn parse_expr(&mut self) -> PResult<Stmt> {
-		let expr = self.parse_expression()?;
+		let expr = self.parse_expression(0)?;
 		if !self.at(Token::SemiColon) {
 			if !self.at(Token::RBrace) {
 				Err(ParseError::ExpectedTokenButNotFound(Token::RBrace))
@@ -64,7 +64,7 @@ where
 
 	fn parse_if(&mut self) -> PResult<Stmt> {
 		self.consume(Token::LParen)?;
-		let cond = self.parse_expression()?;
+		let cond = self.parse_expression(0)?;
 		self.consume(Token::RParen)?;
 
 		self.consume(Token::LBrace)?;

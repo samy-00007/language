@@ -13,7 +13,7 @@ where
 			let mut args = Vec::new();
 
 			while !self.at(Token::RParen) {
-				args.push(self.parse_expression()?);
+				args.push(self.parse_expression(0)?);
 				if self.at(Token::Comma) {
 					self.next();
 				}
@@ -93,7 +93,7 @@ where
 	pub(super) fn parse_list(&mut self, only_idents: bool, end_token: Token) -> PResult<Vec<Expr>> {
 		let mut args = Vec::new();
 		while !self.at(end_token) {
-			let arg = self.parse_expression()?;
+			let arg = self.parse_expression(0)?;
 			if only_idents && !matches!(arg, Expr::Ident(_)) {
 				return Err(ParseError::ExpectedExprButFoundInstead(
 					Expr::Ident("".to_string()),
@@ -117,16 +117,16 @@ where
 		})
 	}
 
-	pub fn parse_expression(&mut self) -> PResult<Expr> {
+	pub fn parse_expression(&mut self, precedence: usize) -> PResult<Expr> {
 		let next = self.next().ok_or(ParseError::UnexpectedEOF)?;
 
-		let lhs = {
+		let mut lhs = {
 			if self.is_ident(next) {
 				self.parse_ident()?
 			} else if self.is_lit(next) {
 				self.parse_lit(next)
 			} else if next == Token::LParen {
-				let expr = self.parse_expression()?;
+				let expr = self.parse_expression(0)?;
 				self.consume(Token::RParen)?;
 				expr
 			} else if next == Token::LBrace {
@@ -138,23 +138,30 @@ where
 			}
 		};
 
-		if let Some(peek) = self.peek() {
-			if self.is_op(peek) {
-				let op = self.next().unwrap().into();
-				let rhs = self.parse_expression()?;
-				Ok(Expr::Infix {
-					// FIXME: priorities
-					op,
-					lhs: Box::new(lhs),
-					rhs: Box::new(rhs)
-				})
-			} else if peek == Token::LParen {
-				self.parse_fn_call(lhs)
+		loop {
+			if let Some(peek) = self.peek() {
+				if self.is_op(peek) {
+					let op = peek.into();
+					let r_precedence = self.operator_precedence(op);
+					if precedence >= r_precedence {
+						return Ok(lhs);
+					}
+					self.next();
+					let rhs = self.parse_expression(r_precedence)?;
+					lhs = Expr::Infix {
+						// FIXME: priorities
+						op,
+						lhs: Box::new(lhs),
+						rhs: Box::new(rhs)
+					};
+				} else if peek == Token::LParen {
+					lhs = self.parse_fn_call(lhs)?;
+				} else {
+					return Ok(lhs);
+				}
 			} else {
-				Ok(lhs)
+				return Ok(lhs);
 			}
-		} else {
-			Ok(lhs)
 		}
 	}
 }
@@ -214,7 +221,7 @@ mod tests {
 	#[test]
 	fn parse_float() {
 		let mut parser = Parser::new("3.5 4.7 7.2");
-		while let Ok(x) = parser.parse_expression() {
+		while let Ok(x) = parser.parse_expression(0) {
 			// can't compare them precisely because they're floats
 			assert!(matches!(x, Expr::Lit(Literal::Float(_))));
 		}
@@ -230,7 +237,7 @@ mod tests {
 			Expr::Lit(Literal::Bool(false)),
 		];
 		let mut parsed = Vec::new();
-		while let Ok(x) = parser.parse_expression() {
+		while let Ok(x) = parser.parse_expression(0) {
 			parsed.push(x);
 		}
 
@@ -249,7 +256,7 @@ mod tests {
 			Expr::Ident("test".to_string()),
 		];
 		let mut parsed = Vec::new();
-		while let Ok(x) = parser.parse_expression() {
+		while let Ok(x) = parser.parse_expression(0) {
 			parsed.push(x);
 		}
 
@@ -372,7 +379,7 @@ mod tests {
 		];
 		let mut parsed = Vec::new();
 		loop {
-			let x = parser.parse_expression();
+			let x = parser.parse_expression(0);
 			match x {
 				Ok(x) => parsed.push(x),
 				Err(ParseError::UnexpectedEOF) => break,
@@ -389,11 +396,18 @@ mod tests {
 
 	#[test]
 	fn parse_priority() {
-		let mut parser = Parser::new("6*7*5  3*5 + 5*5  7*7*7+3 6/7*8-2  a & b & c  a && b && c");
-		let expected = vec![];
+		let mut parser = Parser::new("6*7*5  3*5 + 5*5  7*7*7+3 6/7-2*8-2  a & b & c  a && b && c");
+		let expected = vec![
+			"((6 * 7) * 5)",
+			"((3 * 5) + (5 * 5))",
+			"(((7 * 7) * 7) + 3)",
+			"(((6 / 7) - (2 * 8)) - 2)",
+			"((a & b) & c)",
+			"((a && b) && c)"
+		];
 		let mut parsed = Vec::new();
-		while let Ok(x) = parser.parse_expression() {
-			parsed.push(x);
+		while let Ok(x) = parser.parse_expression(0) {
+			parsed.push(x.to_string());
 		}
 
 		assert_eq!(parsed, expected);

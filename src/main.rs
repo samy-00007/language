@@ -10,6 +10,7 @@ mod parser;
 use parser::Parser;
 
 fn main() {
+	/*
 	let mut parser = Parser::new(
 		"
 	let abcd = 2 + 3;
@@ -28,4 +29,13 @@ fn main() {
 	// println!("{:?}", lex.collect::<Vec<Result<Token, ()>>>());
 	// let mut parser = Parser::new("let a = 5.5 + 3;");
 	println!("{:?}", parser.parse());
+	*/
+	let mut parser = Parser::new("6*7*5;  3*5 + 5*5;  7*7*7+3; 6/7-2*8;  a & b & c;  a && b && c;");
+
+	let res = parser.parse().unwrap();
+
+	for x in res {
+		println!("{}", x);
+	}
+
 }
