@@ -84,7 +84,7 @@ pub enum Token {
 	#[token("<=", priority = 2)]
 	Lte,
 	#[token("==", priority = 2)]
-	Eq,
+	DoubleEq,
 	#[token("!=", priority = 2)]
 	Neq,
 	#[token("&&", priority = 2)]
@@ -106,7 +106,7 @@ pub enum Token {
 	#[token(",")]
 	Comma,
 	#[token("=")]
-	Assign,
+	Eq,
 	#[token("::")]
 	DoubleColon,
 	#[token(":")]
@@ -174,7 +174,7 @@ mod tests {
 		assert_eq!(lex.next(), Some(Ok(Token::Identifier)));
 		assert_eq!(lex.slice(), "abcd");
 
-		assert_eq!(lex.next(), Some(Ok(Token::Assign)));
+		assert_eq!(lex.next(), Some(Ok(Token::Eq)));
 		assert_eq!(lex.slice(), "=");
 
 		assert_eq!(lex.next(), Some(Ok(Token::Int)));
