@@ -10,32 +10,22 @@ mod parser;
 use parser::Parser;
 
 fn main() {
-	/*
+	
 	let mut parser = Parser::new(
 		"
-	let abcd = 2 + 3;
-	let var_2: number = abcd * 5;
-	let var3 = \"abcd\";
-	print(var3 + var_2 + abdc);
-	// abcd
-	/*
-	cihuchu
-	uch. */
-	if (abcd == 5) {
-		print(true);
-	}
+		let total = 0;
+		let count = args_0;
+		while (count > 0) {
+			total = total + args_1;
+			count = count - 1;
+		}
 	"
 	);
 	// println!("{:?}", lex.collect::<Vec<Result<Token, ()>>>());
 	// let mut parser = Parser::new("let a = 5.5 + 3;");
-	println!("{:?}", parser.parse());
-	*/
-	let mut parser = Parser::new("6*7*5;  3*5 + 5*5;  7*7*7+3; 6/7-2*8;  a & b & c;  a && b && c;");
-
-	let res = parser.parse().unwrap();
-
-	for x in res {
+	for x in parser.parse().unwrap() {
 		println!("{}", x);
 	}
+	
 
 }

@@ -129,6 +129,7 @@ where
 				| Token::And | Token::AndEq
 				| Token::Or | Token::OrEq
 				| Token::Tilde | Token::TildeEq
+				| Token::DoubleEq
 		)
 	}
 
@@ -155,18 +156,19 @@ where
 		// https://en.wikipedia.org/wiki/Order_of_operations#Programming_languages
 		type Op = Operator;
 		match op {
-			Op::Not | Op::BitNot => 12,
-			Op::Exponent => 11,
-			Op::Mul | Op::Div | Op::Rem => 10,
-			Op::Add | Op::Sub  => 9,
-			Op::LShift | Op::RShift => 8,
-			Op::Lt | Op::Lte | Op::Gt | Op::Gte => 7,
-			Op::Eq | Op::Neq => 6,
-			Op::BitAnd => 5,
-			Op::BitXor => 4,
-			Op::BitOr => 3,
-			Op::And => 2,
-			Op::Or => 1,
+			Op::Not | Op::BitNot => 13,
+			Op::Exponent => 12,
+			Op::Mul | Op::Div | Op::Rem => 11,
+			Op::Add | Op::Sub  => 10,
+			Op::LShift | Op::RShift => 9,
+			Op::Lt | Op::Lte | Op::Gt | Op::Gte => 8,
+			Op::Eq | Op::Neq => 7,
+			Op::BitAnd => 6,
+			Op::BitXor => 5,
+			Op::BitOr => 4,
+			Op::And => 3,
+			Op::Or => 2,
+			Op::Assign | Op::AddEq | Op::SubEq | Op::MulEq | Op::DivEq | Op::RemEq | Op::BitAndEq | Op::BitOrEq | Op::BitXorEq | Op::LShiftEq | Op::RShiftEq => 1,
 			_ => 0
 		}
 	}
@@ -178,4 +180,3 @@ where
 	}
 }
 
-// FIXME: remove panics for proper error handling

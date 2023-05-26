@@ -1,4 +1,4 @@
-use super::ast::{ParseError, Stmt};
+use super::ast::{ParseError, Stmt, Expr};
 use super::{PResult, Parser, RetItem};
 use crate::lexer::Token;
 
@@ -16,7 +16,7 @@ where
 			t = Some(self.text());
 		}
 
-		self.consume(Token::Assign)?; // TODO: variable without initial value
+		self.consume(Token::Eq)?; // TODO: variable without initial value
 		let expr = self.parse_expression(0)?;
 		self.consume(Token::SemiColon)?;
 		Ok(Stmt::Local {
@@ -62,7 +62,7 @@ where
 		}
 	}
 
-	fn parse_if(&mut self) -> PResult<Stmt> {
+	fn parse_cond_block(&mut self) -> PResult<(Expr, Vec<Stmt>)> {
 		self.consume(Token::LParen)?;
 		let cond = self.parse_expression(0)?;
 		self.consume(Token::RParen)?;
@@ -70,8 +70,18 @@ where
 		self.consume(Token::LBrace)?;
 		let block = self.parse_block()?;
 		self.consume(Token::RBrace)?;
+		Ok((cond, block))
+	}
 
+	fn parse_if(&mut self) -> PResult<Stmt> {
+		let (cond, block) = self.parse_cond_block()?;
 		Ok(Stmt::If { cond, block })
+		// TODO: else
+	}
+
+	fn parse_while(&mut self) -> PResult<Stmt> {
+		let (cond, block) = self.parse_cond_block()?;
+		Ok(Stmt::While { cond, block })
 	}
 
 	pub fn parse_statement(&mut self) -> PResult<Stmt> {
@@ -87,6 +97,7 @@ where
 				Token::Let => self.parse_let(),
 				Token::Fn => self.parse_fn_stmt(),
 				Token::If => self.parse_if(),
+				Token::While => self.parse_while(),
 				// Token::While | Token::For => panic!("Unhandled keyword"),
 				x => todo!("token '{:?}' unhandled (statement)", x)
 			}

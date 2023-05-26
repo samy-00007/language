@@ -26,6 +26,10 @@ pub enum Stmt {
 		cond: Expr,
 		block: Block
 	},
+	While {
+		cond: Expr,
+		block: Block
+	},
 	Return(Expr),
 	Expr(Expr),
 	FnReturn(Expr)
@@ -57,6 +61,8 @@ pub enum Prefix {
 
 #[derive(Debug, Clone, PartialEq, Copy)]
 pub enum Operator {
+	Assign,
+
 	Add,
 	AddEq,
 	Sub,
@@ -108,6 +114,8 @@ impl Display for Prefix {
 impl From<Token> for Operator {
 	fn from(value: Token) -> Self {
 		match value {
+			Token::Eq => Operator::Assign,
+
 			Token::Plus => Operator::Add,
 			Token::PlusEq => Operator::AddEq,
 			Token::Minus => Operator::Sub,
@@ -135,7 +143,7 @@ impl From<Token> for Operator {
 			Token::RShift => Operator::RShift,
 			Token::RShiftEq => Operator::RShiftEq,
 
-			Token::Eq => Operator::Eq,
+			Token::DoubleEq => Operator::Eq,
 			Token::Gte => Operator::Gte,
 			Token::Lte => Operator::Lte,
 			Token::Neq => Operator::Neq,
@@ -179,6 +187,8 @@ impl Display for Literal {
 impl Display for Operator {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		let res = match self {
+			Self::Assign => "=",
+
 			Self::Add => "+",
 			Self::AddEq => "+=",
 			Self::Sub => "-",
@@ -227,15 +237,7 @@ impl Display for Stmt {
 		let res = match self {
 			Self::Expr(x) => format!("{};", x),
 			Self::FnReturn(x) => format!("return {}", x),
-			Self::If { cond, block } => format!(
-				"if ({}) {{\n{}\n}}",
-				cond,
-				block
-					.iter()
-					.map(|x| x.to_string())
-					.collect::<Vec<String>>()
-					.join("\n")
-			),
+			Self::If { cond, block } => format!("if ({}) {{\n{}\n}}", cond, print_s(block, "\n")),
 			Self::Local { name, t, val } => {
 				let t_ = if let Some(t) = t {
 					format!(": {}", t)
@@ -258,47 +260,36 @@ impl Display for Stmt {
 					.collect::<Vec<String>>()
 					.join("\n"),
 				t,
-				block
-					.iter()
-					.map(|x| x.to_string())
-					.collect::<Vec<String>>()
-					.join("\n")
-			)
+				print_s(block, "\n")
+			),
+			Self::While { cond, block } => {
+				format!("while ({}) {{\n{}\n}}", cond, print_s(block, "\n"))
+			}
 		};
 		write!(f, "{}", res)
 	}
 }
 
+fn print_s<T>(vec: &Vec<T>, sep: &str) -> String
+where
+	T: Display
+{
+	vec.iter()
+		.map(|x| x.to_string())
+		.collect::<Vec<String>>()
+		.join(sep)
+}
+
 impl std::fmt::Display for Expr {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		let res = match self {
-			Self::Block(x) => format!(
-				"{{\n{}\n}}",
-				x.iter()
-					.map(|x| x.to_string())
-					.collect::<Vec<String>>()
-					.join("\n")
-			),
-			Self::FnNamedCall { name, args } => {
-				let joined: String = args
-					.iter()
-					.map(|x| x.to_string())
-					.collect::<Vec<String>>()
-					.join(", ");
-				format!("{name}({})", joined)
-			}
+			Self::Block(x) => format!("{{\n{}\n}}", print_s(x, "\n")),
+			Self::FnNamedCall { name, args } => format!("{name}({})", print_s(args, ", ")),
 			Self::Ident(s) => format!("{}", s),
 			Self::Lit(l) => format!("{}", l),
 			Self::Infix { op, lhs, rhs } => format!("({} {} {})", lhs, op, rhs),
 			Self::Prefix(prefix, e) => format!("({}{})", prefix, e),
-			Self::FnCall { expr, args } => format!(
-				"{}({})",
-				expr,
-				args.iter()
-					.map(|x| x.to_string())
-					.collect::<Vec<String>>()
-					.join(", ")
-			)
+			Self::FnCall { expr, args } => format!("{}({})", expr, print_s(args, ", "))
 		};
 		write!(f, "{}", res)
 	}
