@@ -257,6 +257,40 @@ mod tests {
 	}
 
 	#[test]
+	fn parse_block() {
+		let strs = [
+			(
+				"5; print(\"test\");4}",
+				vec![
+					Stmt::Expr(Expr::Lit(Literal::Int(5))),
+					Stmt::Expr(Expr::FnNamedCall {
+						name: "print".to_string(),
+						args: vec![Expr::Lit(Literal::String("test".to_string()))]
+					}),
+					Stmt::Return(Expr::Lit(Literal::Int(4))),
+				]
+			),
+			(
+				"5; print(\"test\");4;", // returning a value requires to be in a block surrounded with braces
+				vec![
+					Stmt::Expr(Expr::Lit(Literal::Int(5))),
+					Stmt::Expr(Expr::FnNamedCall {
+						name: "print".to_string(),
+						args: vec![Expr::Lit(Literal::String("test".to_string()))]
+					}),
+					Stmt::Expr(Expr::Lit(Literal::Int(4))),
+				]
+			)
+		];
+		for (string, expected) in strs {
+			let mut parser = Parser::new(string);
+			let res = parser.parse_block().unwrap();
+
+			assert_eq!(res, expected);
+		}
+	}
+
+	#[test]
 	#[allow(clippy::just_underscores_and_digits)]
 	fn parse_ops() {
 		let mut parser = Parser::new("5+5 6*7 5^3 4-8 4/8 8!=4 5==5 6>3 4>=4 1<5 6<=test 4*4*4");
