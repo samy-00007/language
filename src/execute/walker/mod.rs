@@ -1,12 +1,13 @@
 #![allow(clippy::cast_precision_loss)]
 #![allow(dead_code)]
 use std::collections::HashMap;
-use std::ops::{Add, Sub};
+use std::ops::{Add, Sub, Neg, Mul, Div};
 
 use crate::parser::ast::{Expr, Literal, Operator, Stmt};
 
 impl Add for Literal {
 	type Output = Self;
+
 	fn add(self, rhs: Self) -> Self::Output {
 		match self {
 			Self::Int(x) => match rhs {
@@ -35,6 +36,7 @@ impl Add for Literal {
 
 impl Sub for Literal {
 	type Output = Self;
+
 	fn sub(self, rhs: Self) -> Self::Output {
 		match self {
 			Self::Int(x) => match rhs {
@@ -49,6 +51,52 @@ impl Sub for Literal {
 				Self::Int(y) => Self::Float(x - y as f64),
 				_ => panic!("Unknow operation"),
 			},
+		}
+	}
+}
+
+impl Neg for Literal {
+	type Output = Self;
+
+	fn neg(self) -> Self::Output {
+		Literal::Int(0) - self
+	}
+}
+
+impl Mul for Literal {
+	type Output = Self;
+	fn mul(self, rhs: Self) -> Self::Output {
+		match self {
+			Self::Int(x) => match rhs {
+				Self::Int(y) => Self::Int(x * y),
+				Self::Float(y) => Self::Float(x as f64 * y),
+				_ => panic!("tried to mul string or bool")
+			},
+			Self::Float(x) => match rhs {
+				Self::Int(y) => Self::Float(x * y as f64),
+				Self::Float(y) => Self::Float(x * y),
+				_ => panic!("tried to mul string or bool")
+			},
+			_ => panic!("tried to mul string or bool")
+		}
+	}
+}
+
+impl Div for Literal {
+	type Output = Self;
+	fn div(self, rhs: Self) -> Self::Output {
+		match self {
+			Self::Int(x) => match rhs {
+				Self::Int(y) => Self::Int(x / y),
+				Self::Float(y) => Self::Float(x as f64 / y),
+				_ => panic!("tried to mul string or bool")
+			},
+			Self::Float(x) => match rhs {
+				Self::Int(y) => Self::Float(x / y as f64),
+				Self::Float(y) => Self::Float(x / y),
+				_ => panic!("tried to mul string or bool")
+			},
+			_ => panic!("tried to mul string or bool")
 		}
 	}
 }

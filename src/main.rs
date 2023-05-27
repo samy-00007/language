@@ -11,8 +11,10 @@ use std::collections::HashMap;
 
 // use lexer::Token;
 // use logos::Logos;
-use parser::Parser;
+use parser::{Parser, ast::Literal};
+use execute::stack_bytecode::{Program, Opcode};
 
+/* 
 fn main() {
 	
 	// let mut parser = Parser::new(
@@ -36,4 +38,37 @@ fn main() {
 	// execute::walker::walk(blk, &mut locals, args);
 	// println!("{:?}", locals);
 
+}
+*/
+
+
+fn main() {
+	/*let constants = vec![Literal::String("abcd".to_string()), Literal::Float(7.5)];
+	let p = vec![
+		Opcode::Const,
+		Opcode::Const, // 1
+		Opcode::DefGlob,
+		Opcode::Hlt,
+		Opcode::Hlt
+	].into_iter().map(std::convert::Into::into).collect();
+	let mut prog = Program::new(p, constants);
+
+	prog.run();
+
+	println!("{prog:?}");*/
+
+	let mut parser = Parser::new("
+	let a = 1;
+	a = a + 2 * 3;
+	print(a);
+	");
+	let parsed = parser.parse().unwrap();
+	let res = execute::stack_bytecode::compile_block(parsed);
+
+	println!("{:?}", res);
+
+	let mut prog = Program::new(res.0, res.1);
+
+	prog.run();
+	println!("{:?}", prog);
 }
