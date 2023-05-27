@@ -1,4 +1,4 @@
-use std::{fmt::Display, ops::{Add, Sub}};
+use std::fmt::Display;
 
 //use f128::f128;
 
@@ -54,53 +54,6 @@ pub enum Literal {
 	String(String),
 }
 
-impl Add for Literal {
-	type Output = Self;
-	fn add(self, rhs: Self) -> Self::Output {
-		match self {
-			Self::Int(x) => match rhs {
-				Self::Int(y) => Self::Int(x + y),
-				Self::Float(y) => Self::Float(x as f64 + y),
-				//Self::Bool(y) => Self::Int(x + y as i128),
-				Self::String(y) => Self::String(x.to_string() + y.as_str()),
-				_ => panic!("Unknow operation"),
-			},
-			Self::Bool(x) => panic!("cannot add bool"),
-			Self::String(x) => match rhs {
-				Self::String(y) => Self::String(x + y.as_str()),
-				Self::Int(y) => Self::String(x + y.to_string().as_str()),
-				Self::Float(y) => Self::String(x + y.to_string().as_str()),
-				Self::Bool(y) => Self::String(x + y.to_string().as_str()),
-			},
-			Self::Float(x) => match rhs {
-				Self::Float(y) => Self::Float(x + y),
-				Self::Int(y) => Self::Float(x + y as f64),
-				Self::String(y) => Self::String(x.to_string() + y.as_str()),
-				_ => panic!("Unknow operation"),
-			},
-		}
-	}
-}
-
-impl Sub for Literal {
-	type Output = Self;
-	fn sub(self, rhs: Self) -> Self::Output {
-		match self {
-			Self::Int(x) => match rhs {
-				Self::Int(y) => Self::Int(x - y),
-				Self::Float(y) => Self::Float(x as f64 - y),
-				_ => panic!("Unknow operation"),
-			},
-			Self::Bool(x) => panic!("cannot sub bool"),
-			Self::String(x) => panic!("cannot sub str"),
-			Self::Float(x) => match rhs {
-				Self::Float(y) => Self::Float(x - y),
-				Self::Int(y) => Self::Float(x - y as f64),
-				_ => panic!("Unknow operation"),
-			},
-		}
-	}
-}
 
 #[derive(Debug, Clone, PartialEq, Copy)]
 pub enum Prefix {
@@ -333,7 +286,7 @@ impl Display for Expr {
 		let res = match self {
 			Self::Block(x) => format!("{{\n{}\n}}", print_s(x, "\n")),
 			Self::FnNamedCall { name, args } => format!("{name}({})", print_s(args, ", ")),
-			Self::Ident(s) => format!("{}", s),
+			Self::Ident(s) => s.to_string(),
 			Self::Lit(l) => format!("{}", l),
 			Self::Infix { op, lhs, rhs } => format!("({} {} {})", lhs, op, rhs),
 			Self::Prefix(prefix, e) => format!("({}{})", prefix, e),

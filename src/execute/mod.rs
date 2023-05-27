@@ -1,2 +1,2 @@
 pub mod walker;
-pub mod bytecode;
+pub mod stack_bytecode;
