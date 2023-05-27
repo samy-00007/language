@@ -9,12 +9,13 @@ where
 	fn parse_let(&mut self) -> PResult<Stmt> {
 		let name = self.get_ident()?;
 
-		let mut t = None;
-		if self.at(Token::Colon) {
+		let t = if self.at(Token::Colon) {
 			self.next();
 			assert_eq!(self.next(), Some(Token::Identifier));
-			t = Some(self.text());
-		}
+			Some(self.text())
+		} else {
+			None
+		};
 
 		self.consume(Token::Eq)?; // TODO: variable without initial value
 		let expr = self.parse_expression(0)?;
@@ -50,15 +51,13 @@ where
 
 	fn parse_expr(&mut self) -> PResult<Stmt> {
 		let expr = self.parse_expression(0)?;
-		if !self.at(Token::SemiColon) {
-			if !self.at(Token::RBrace) {
-				Err(ParseError::ExpectedTokenButNotFound(Token::RBrace))
-			} else {
-				Ok(Stmt::Return(expr))
-			}
-		} else {
+		if self.at(Token::SemiColon) {
 			self.consume(Token::SemiColon)?;
 			Ok(Stmt::Expr(expr))
+		} else if self.at(Token::RBrace) {
+			Ok(Stmt::Return(expr))
+		} else {
+			Err(ParseError::ExpectedTokenButNotFound(Token::RBrace))
 		}
 	}
 
@@ -89,9 +88,7 @@ where
 		assert!(peek.is_some(), "Unexpected EOF");
 		let peek = peek.unwrap();
 
-		if !self.is_keyword(peek) {
-			self.parse_expr()
-		} else {
+		if Self::is_keyword(peek) {
 			self.next();
 			match peek {
 				Token::Let => self.parse_let(),
@@ -101,6 +98,8 @@ where
 				// Token::While | Token::For => panic!("Unhandled keyword"),
 				x => todo!("token '{:?}' unhandled (statement)", x)
 			}
+		} else {
+			self.parse_expr()
 		}
 	}
 }

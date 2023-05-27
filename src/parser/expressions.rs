@@ -97,7 +97,7 @@ where
 			let arg = self.parse_expression(0)?;
 			if only_idents && !matches!(arg, Expr::Ident(_)) {
 				return Err(ParseError::ExpectedExprButFoundInstead(
-					Expr::Ident("".to_string()),
+					Expr::Ident(String::new()),
 					arg
 				));
 			}
@@ -122,9 +122,9 @@ where
 		let next = self.next().ok_or(ParseError::UnexpectedEOF)?;
 
 		let mut lhs = {
-			if self.is_ident(next) {
+			if Self::is_ident(next) {
 				self.parse_ident()?
-			} else if self.is_lit(next) {
+			} else if Self::is_lit(next) {
 				self.parse_lit(next)
 			} else if next == Token::LParen {
 				let expr = self.parse_expression(0)?;
@@ -141,9 +141,9 @@ where
 
 		loop {
 			if let Some(peek) = self.peek() {
-				if self.is_op(peek) {
+				if Self::is_op(peek) {
 					let op = peek.into();
-					let r_precedence = self.operator_precedence(op);
+					let r_precedence = Self::operator_precedence(op);
 					if precedence >= r_precedence {
 						return Ok(lhs);
 					}
@@ -304,78 +304,78 @@ mod tests {
 		let mut parser = Parser::new("5+5 6*7 5^3 4-8 4/8 8!=4 5==5 6>3 4>=4 1<5 6<=test 4*4*4");
 		let f = |n| Box::new(Expr::Lit(Literal::Int(n)));
 
-		let _1 = f(1);
-		let _3 = f(3);
-		let _4 = f(4);
-		let _5 = f(5);
-		let _6 = f(6);
-		let _7 = f(7);
-		let _8 = f(8);
+		let n1 = f(1);
+		let n3 = f(3);
+		let n4 = f(4);
+		let n5 = f(5);
+		let n6 = f(6);
+		let n7 = f(7);
+		let n8 = f(8);
 
 		let expected = vec![
 			Expr::Infix {
 				op: Operator::Add,
-				lhs: _5.clone(),
-				rhs: _5.clone()
+				lhs: n5.clone(),
+				rhs: n5.clone()
 			},
 			Expr::Infix {
 				op: Operator::Mul,
-				lhs: _6.clone(),
-				rhs: _7
+				lhs: n6.clone(),
+				rhs: n7
 			},
 			Expr::Infix {
 				op: Operator::BitXor,
-				lhs: _5.clone(),
-				rhs: _3.clone()
+				lhs: n5.clone(),
+				rhs: n3.clone()
 			},
 			Expr::Infix {
 				op: Operator::Sub,
-				lhs: _4.clone(),
-				rhs: _8.clone()
+				lhs: n4.clone(),
+				rhs: n8.clone()
 			},
 			Expr::Infix {
 				op: Operator::Div,
-				lhs: _4.clone(),
-				rhs: _8.clone()
+				lhs: n4.clone(),
+				rhs: n8.clone()
 			},
 			Expr::Infix {
 				op: Operator::Neq,
-				lhs: _8,
-				rhs: _4.clone()
+				lhs: n8,
+				rhs: n4.clone()
 			},
 			Expr::Infix {
 				op: Operator::Eq,
-				lhs: _5.clone(),
-				rhs: _5.clone()
+				lhs: n5.clone(),
+				rhs: n5.clone()
 			},
 			Expr::Infix {
 				op: Operator::Gt,
-				lhs: _6.clone(),
-				rhs: _3
+				lhs: n6.clone(),
+				rhs: n3
 			},
 			Expr::Infix {
 				op: Operator::Gte,
-				lhs: _4.clone(),
-				rhs: _4.clone()
+				lhs: n4.clone(),
+				rhs: n4.clone()
 			},
 			Expr::Infix {
 				op: Operator::Lt,
-				lhs: _1,
-				rhs: _5
+				lhs: n1,
+				rhs: n5
 			},
 			Expr::Infix {
 				op: Operator::Lte,
-				lhs: _6,
+				lhs: n6,
 				rhs: Box::new(Expr::Ident("test".to_string()))
 			},
 			Expr::Infix {
 				op: Operator::Mul,
 				lhs: Box::new(Expr::Infix {
 					op: Operator::Mul,
-					lhs: _4.clone(),
-					rhs: _4.clone()
+					lhs: n4.clone(),
+					rhs: n4.clone()
 				}),
-				rhs: _4
+				rhs: n4
 			},
 		];
 		let mut parsed = Vec::new();
@@ -385,7 +385,7 @@ mod tests {
 				Ok(x) => parsed.push(x),
 				Err(ParseError::UnexpectedEOF) => break,
 				Err(x) => {
-					eprintln!("{}", x);
+					eprintln!("{x}");
 					eprintln!("{:?}", parser.range);
 					panic!()
 				}

@@ -2,7 +2,7 @@
 // FIXME:
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
-#![warn(clippy::cargo)]
+// #![warn(clippy::cargo)]
 mod lexer;
 mod parser;
 mod execute;

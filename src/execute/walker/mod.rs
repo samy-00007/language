@@ -1,3 +1,5 @@
+#![allow(clippy::cast_precision_loss)]
+#![allow(dead_code)]
 use std::collections::HashMap;
 use std::ops::{Add, Sub};
 
@@ -12,7 +14,7 @@ impl Add for Literal {
 				Self::Float(y) => Self::Float(x as f64 + y),
 				//Self::Bool(y) => Self::Int(x + y as i128),
 				Self::String(y) => Self::String(x.to_string() + y.as_str()),
-				_ => panic!("Unknow operation"),
+				Self::Bool(_) => panic!("Unknow operation"),
 			},
 			Self::Bool(_) => panic!("cannot add bool"),
 			Self::String(x) => match rhs {
@@ -25,7 +27,7 @@ impl Add for Literal {
 				Self::Float(y) => Self::Float(x + y),
 				Self::Int(y) => Self::Float(x + y as f64),
 				Self::String(y) => Self::String(x.to_string() + y.as_str()),
-				_ => panic!("Unknow operation"),
+				Self::Bool(_) => panic!("Unknow operation"),
 			},
 		}
 	}
@@ -111,19 +113,19 @@ fn eval_expr(expr: Expr, locals: &mut HashMap<String, Literal>, args: [usize; 2]
 			},
 			x => todo!("{}", x)
 		},
-		Expr::Ident(x) => return get_val(x, locals, args),
+		Expr::Ident(x) => return get_val(x.as_str(), locals, args),
 		x => todo!("{}", x)
 	};
 	Literal::Int(0)
 }
 
-fn get_val(ident: String, locals: &mut HashMap<String, Literal>, args: [usize; 2]) -> Literal {
-	if ident == *"arg_0" {
+fn get_val(ident: &str, locals: &mut HashMap<String, Literal>, args: [usize; 2]) -> Literal {
+	if ident == "arg_0" {
 		Literal::Int(args[0] as i128)
-	} else if ident == *"arg_1" {
+	} else if ident == "arg_1" {
 		Literal::Int(args[1] as i128)
 	} else {
 		// println!("{}", ident);
-		locals.get(&ident).unwrap().to_owned()
+		locals.get(&ident.to_string()).unwrap().clone()
 	}
 }

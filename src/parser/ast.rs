@@ -55,12 +55,12 @@ pub enum Literal {
 }
 
 
-#[derive(Debug, Clone, PartialEq, Copy)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub enum Prefix {
 	Not, // bitwise invert
 }
 
-#[derive(Debug, Clone, PartialEq, Copy)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub enum Operator {
 	Assign,
 
@@ -108,56 +108,53 @@ impl Display for Prefix {
 		let res = match self {
 			Self::Not => "~",
 		};
-		write!(f, "{}", res)
+		write!(f, "{res}")
 	}
 }
 
 impl From<Token> for Operator {
 	fn from(value: Token) -> Self {
 		match value {
-			Token::Eq => Operator::Assign,
+			Token::Eq => Self::Assign,
 
-			Token::Plus => Operator::Add,
-			Token::PlusEq => Operator::AddEq,
-			Token::Minus => Operator::Sub,
-			Token::MinusEq => Operator::SubEq,
-			Token::Asterisk => Operator::Mul,
-			Token::AsteriskEq => Operator::MulEq,
-			Token::DoubleAsterisk => Operator::Exponent,
-			Token::DoubleAsteriskEq => Operator::ExponentEq,
-			Token::Slash => Operator::Div,
-			Token::SlashEq => Operator::DivEq,
-			Token::Percent => Operator::Rem,
-			Token::PercentEq => Operator::RemEq,
-			Token::ExclamationMark => Operator::Not,
+			Token::Plus => Self::Add,
+			Token::PlusEq => Self::AddEq,
+			Token::Minus => Self::Sub,
+			Token::MinusEq => Self::SubEq,
+			Token::Asterisk => Self::Mul,
+			Token::AsteriskEq => Self::MulEq,
+			Token::DoubleAsterisk => Self::Exponent,
+			Token::DoubleAsteriskEq => Self::ExponentEq,
+			Token::Slash => Self::Div,
+			Token::SlashEq => Self::DivEq,
+			Token::Percent => Self::Rem,
+			Token::PercentEq => Self::RemEq,
+			Token::ExclamationMark => Self::Not,
 
-			Token::Tilde => Operator::BitNot,
-			Token::TildeEq => Operator::BitNotEq,
-			Token::Anpersand => Operator::BitAnd,
-			Token::AnpersandEq => Operator::BitAndEq,
-			Token::Bar => Operator::BitOr,
-			Token::BarEq => Operator::BitOrEq,
-			Token::Caret => Operator::BitXor,
-			Token::CaretEq => Operator::BitXorEq,
-			Token::LShift => Operator::LShift,
-			Token::LShiftEq => Operator::LShiftEq,
-			Token::RShift => Operator::RShift,
-			Token::RShiftEq => Operator::RShiftEq,
+			Token::Tilde => Self::BitNot,
+			Token::TildeEq => Self::BitNotEq,
+			Token::Anpersand => Self::BitAnd,
+			Token::AnpersandEq => Self::BitAndEq,
+			Token::Bar => Self::BitOr,
+			Token::BarEq => Self::BitOrEq,
+			Token::Caret => Self::BitXor,
+			Token::CaretEq => Self::BitXorEq,
+			Token::LShift => Self::LShift,
+			Token::LShiftEq => Self::LShiftEq,
+			Token::RShift => Self::RShift,
+			Token::RShiftEq => Self::RShiftEq,
 
-			Token::DoubleEq => Operator::Eq,
-			Token::Gte => Operator::Gte,
-			Token::Lte => Operator::Lte,
-			Token::Neq => Operator::Neq,
-			Token::And => Operator::And,
-			Token::AndEq => Operator::AndEq,
-			Token::Or => Operator::Or,
-			Token::OrEq => Operator::OrEq,
-			Token::RChevron => Operator::Gt,
-			Token::LChevron => Operator::Lt,
-			_ => panic!(
-				"Unexpected token while converting to operator: '{:?}'",
-				value
-			),
+			Token::DoubleEq => Self::Eq,
+			Token::Gte => Self::Gte,
+			Token::Lte => Self::Lte,
+			Token::Neq => Self::Neq,
+			Token::And => Self::And,
+			Token::AndEq => Self::AndEq,
+			Token::Or => Self::Or,
+			Token::OrEq => Self::OrEq,
+			Token::RChevron => Self::Gt,
+			Token::LChevron => Self::Lt,
+			_ => unreachable!(),
 		}
 	}
 }
@@ -179,9 +176,9 @@ impl Display for Literal {
 			Self::Bool(x) => x.to_string(),
 			Self::Float(x) => x.to_string(),
 			Self::Int(x) => x.to_string(),
-			Self::String(x) => format!("\"{}\"", x),
+			Self::String(x) => format!("\"{x}\""),
 		};
-		write!(f, "{}", res)
+		write!(f, "{res}")
 	}
 }
 
@@ -229,25 +226,21 @@ impl Display for Operator {
 			Self::OrEq => "||=",
 		};
 
-		write!(f, "{}", res)
+		write!(f, "{res}")
 	}
 }
 
 impl Display for Stmt {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		let res = match self {
-			Self::Expr(x) => format!("{};", x),
-			Self::FnReturn(x) => format!("return {}", x),
+			Self::Expr(x) => format!("{x};"),
+			Self::FnReturn(x) => format!("return {x}"),
 			Self::If { cond, block } => format!("if ({}) {{\n{}\n}}", cond, print_s(block, "\n")),
 			Self::Local { name, t, val } => {
-				let t_ = if let Some(t) = t {
-					format!(": {}", t)
-				} else {
-					"".to_string()
-				};
-				format!("let {}{} = {};", name, t_, val)
+				let t_ = t.as_ref().map_or_else(String::new, |t| format!(": {}", t));
+				format!("let {name}{t_} = {val};")
 			}
-			Self::Return(x) => format!("{}", x),
+			Self::Return(x) => format!("{x}"),
 			Self::Function {
 				name,
 				args,
@@ -267,16 +260,16 @@ impl Display for Stmt {
 				format!("while ({}) {{\n{}\n}}", cond, print_s(block, "\n"))
 			}
 		};
-		write!(f, "{}", res)
+		write!(f, "{res}")
 	}
 }
 
-fn print_s<T>(vec: &Vec<T>, sep: &str) -> String
+fn print_s<T>(vec: &[T], sep: &str) -> String
 where
 	T: Display,
 {
 	vec.iter()
-		.map(|x| x.to_string())
+		.map(std::string::ToString::to_string)
 		.collect::<Vec<String>>()
 		.join(sep)
 }
@@ -287,12 +280,12 @@ impl Display for Expr {
 			Self::Block(x) => format!("{{\n{}\n}}", print_s(x, "\n")),
 			Self::FnNamedCall { name, args } => format!("{name}({})", print_s(args, ", ")),
 			Self::Ident(s) => s.to_string(),
-			Self::Lit(l) => format!("{}", l),
-			Self::Infix { op, lhs, rhs } => format!("({} {} {})", lhs, op, rhs),
-			Self::Prefix(prefix, e) => format!("({}{})", prefix, e),
+			Self::Lit(l) => format!("{l}"),
+			Self::Infix { op, lhs, rhs } => format!("({lhs} {op} {rhs})"),
+			Self::Prefix(prefix, e) => format!("({prefix}{e})"),
 			Self::FnCall { expr, args } => format!("{}({})", expr, print_s(args, ", ")),
 		};
-		write!(f, "{}", res)
+		write!(f, "{res}")
 	}
 }
 
@@ -310,6 +303,6 @@ impl Display for ParseError {
 			}
 			Self::ExpectedExprButNotFound(t) => format!("Expected expression '{t:?}'"),
 		};
-		write!(f, "{}", res)
+		write!(f, "{res}")
 	}
 }

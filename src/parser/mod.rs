@@ -8,9 +8,9 @@ use std::{iter::Peekable, ops::Range};
 
 use self::ast::{Block, ParseError, Operator};
 
-pub(super) type RetItem = (Result<Token, ()>, Range<usize>);
-pub(super) type Item = (Token, Range<usize>);
-pub(super) type PResult<T> = Result<T, ParseError>;
+pub type RetItem = (Result<Token, ()>, Range<usize>);
+pub type Item = (Token, Range<usize>);
+pub type PResult<T> = Result<T, ParseError>;
 
 pub struct Parser<'a, I>
 where
@@ -38,12 +38,12 @@ where
 {
 	fn unwrap_ref(t: Option<&RetItem>) -> Option<Item> {
 		match t {
-			Some(&(Ok(ref token), ref r)) => Some((token.to_owned(), r.to_owned())),
+			Some(&(Ok(ref token), ref r)) => Some((*token, r.clone())),
 			_ => None
 		}
 	}
 
-	fn unwrap(t: Option<RetItem>) -> Option<Item> {
+	const fn unwrap(t: Option<RetItem>) -> Option<Item> {
 		match t {
 			Some((Ok(token), r)) => Some((token, r)),
 			_ => None
@@ -70,44 +70,35 @@ where
 	}
 
 	pub(self) fn at(&mut self, expected: Token) -> bool {
-		if let Some(token) = self.peek() {
-			token == expected
-		} else {
-			false
-		}
+		self.peek().map_or(false, |token| token == expected)
 	}
 
 	pub(self) fn text(&self) -> String {
-		self.source[self.range.to_owned()].to_string()
+		self.source[self.range.clone()].to_string()
 	}
 
 	pub(self) fn consume(&mut self, expected: Token) -> PResult<()> {
-		match self.next() {
-			Some(token) => {
-				if token == expected {
+		self.next().map_or_else(|| Err(ParseError::UnexpectedEOF), |token| if token == expected {
 					Ok(())
 				} else {
 					Err(ParseError::ExpectedTokenButFoundInstead(expected, token))
-				}
-			}
-			None => Err(ParseError::UnexpectedEOF)
-		}
+				})
 	}
 
 	// utils
 
-	pub(self) fn is_lit(&self, token: Token) -> bool {
+	pub(self) const fn is_lit(token: Token) -> bool {
 		matches!(
 			token,
 			Token::String | Token::Int | Token::Float | Token::True | Token::False
 		)
 	}
 
-	pub(self) fn is_ident(&self, token: Token) -> bool {
+	pub(self) fn is_ident(token: Token) -> bool {
 		token == Token::Identifier
 	}
 
-	pub(self) fn is_op(&self, token: Token) -> bool {
+	pub(self) const fn is_op(token: Token) -> bool {
 		// TODO: expand that
 		matches!(
 			token,
@@ -133,7 +124,7 @@ where
 		)
 	}
 
-	pub(self) fn is_keyword(&self, token: Token) -> bool {
+	pub(self) const fn is_keyword(token: Token) -> bool {
 		matches!(
 			token,
 			Token::Fn | Token::Let | Token::If | Token::For | Token::While
@@ -142,17 +133,17 @@ where
 
 	pub(self) fn get_ident(&mut self) -> PResult<String> {
 		let ident = self.next().ok_or(ParseError::UnexpectedEOF)?;
-		if ident != Token::Identifier {
+		if ident == Token::Identifier {
+			Ok(self.text())
+		} else {
 			Err(ParseError::ExpectedTokenButFoundInstead(
 				Token::Identifier,
 				ident
 			))
-		} else {
-			Ok(self.text())
 		}
 	}
 
-	pub(self) fn operator_precedence(&self, op: Operator) -> usize {
+	pub(self) const fn operator_precedence(op: Operator) -> usize {
 		// https://en.wikipedia.org/wiki/Order_of_operations#Programming_languages
 		type Op = Operator;
 		match op {
