@@ -37,8 +37,9 @@ where
 			Token::Float => {
 				let text = self.text();
 				Expr::Lit(Literal::Float(
-					f128::f128::parse(&text)
-						.unwrap_or_else(|_| panic!("invalid integer: {}", text))
+					//f128::f128::parse(&text)
+					text.parse()
+						.unwrap_or_else(|_| panic!("invalid float: {}", text)) // shouldn't happen
 				))
 			}
 			Token::True => Expr::Lit(Literal::Bool(true)),

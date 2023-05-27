@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use f128::f128;
+//use f128::f128;
 
 use crate::lexer::Token;
 // https://github.com/Rydgel/monkey-rust/blob/master/lib/parser/ast.rs
@@ -49,7 +49,7 @@ pub enum Expr {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Literal {
 	Int(i128),
-	Float(f128), // TODO: test that
+	Float(f64), // TODO: test that
 	Bool(bool),
 	String(String)
 }
@@ -280,7 +280,7 @@ where
 		.join(sep)
 }
 
-impl std::fmt::Display for Expr {
+impl Display for Expr {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		let res = match self {
 			Self::Block(x) => format!("{{\n{}\n}}", print_s(x, "\n")),
@@ -295,7 +295,7 @@ impl std::fmt::Display for Expr {
 	}
 }
 
-impl std::fmt::Display for ParseError {
+impl Display for ParseError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		let res = match self {
 			Self::UnexpectedEOF => "Expected expression but found <EOF>".to_string(),
