@@ -4,7 +4,7 @@
 // #![allow(dead_code, unused_imports)]
 mod lexer;
 mod parser;
-mod walker;
+mod execute;
 
 use std::collections::HashMap;
 
@@ -33,7 +33,7 @@ fn main() {
 	let blk = parser.parse().unwrap();
 	let mut locals = HashMap::new();
 	let args = [10000, 13];
-	walker::walk(blk, &mut locals, args);
+	execute::walker::walk(blk, &mut locals, args);
 	println!("{:?}", locals);
 
 }

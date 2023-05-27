@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, ops::{Add, Sub}};
 
 //use f128::f128;
 
@@ -14,25 +14,25 @@ pub enum Stmt {
 		// var decl
 		name: String,
 		t: Option<String>,
-		val: E
+		val: E,
 	},
 	Function {
 		name: String,
 		args: Vec<(String, String)>,
 		t: String,
-		block: Block
+		block: Block,
 	},
 	If {
 		cond: Expr,
-		block: Block
+		block: Block,
 	},
 	While {
 		cond: Expr,
-		block: Block
+		block: Block,
 	},
 	Return(Expr),
 	Expr(Expr),
-	FnReturn(Expr)
+	FnReturn(Expr),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -43,20 +43,68 @@ pub enum Expr {
 	Infix { op: Operator, lhs: E, rhs: E },
 	Block(Block), // FIXME: handle statements in there
 	FnCall { expr: E, args: Vec<Expr> },
-	FnNamedCall { name: String, args: Vec<Expr> }
+	FnNamedCall { name: String, args: Vec<Expr> },
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum Literal {
 	Int(i128),
 	Float(f64), // TODO: test that
 	Bool(bool),
-	String(String)
+	String(String),
+}
+
+impl Add for Literal {
+	type Output = Self;
+	fn add(self, rhs: Self) -> Self::Output {
+		match self {
+			Self::Int(x) => match rhs {
+				Self::Int(y) => Self::Int(x + y),
+				Self::Float(y) => Self::Float(x as f64 + y),
+				//Self::Bool(y) => Self::Int(x + y as i128),
+				Self::String(y) => Self::String(x.to_string() + y.as_str()),
+				_ => panic!("Unknow operation"),
+			},
+			Self::Bool(x) => panic!("cannot add bool"),
+			Self::String(x) => match rhs {
+				Self::String(y) => Self::String(x + y.as_str()),
+				Self::Int(y) => Self::String(x + y.to_string().as_str()),
+				Self::Float(y) => Self::String(x + y.to_string().as_str()),
+				Self::Bool(y) => Self::String(x + y.to_string().as_str()),
+			},
+			Self::Float(x) => match rhs {
+				Self::Float(y) => Self::Float(x + y),
+				Self::Int(y) => Self::Float(x + y as f64),
+				Self::String(y) => Self::String(x.to_string() + y.as_str()),
+				_ => panic!("Unknow operation"),
+			},
+		}
+	}
+}
+
+impl Sub for Literal {
+	type Output = Self;
+	fn sub(self, rhs: Self) -> Self::Output {
+		match self {
+			Self::Int(x) => match rhs {
+				Self::Int(y) => Self::Int(x - y),
+				Self::Float(y) => Self::Float(x as f64 - y),
+				_ => panic!("Unknow operation"),
+			},
+			Self::Bool(x) => panic!("cannot sub bool"),
+			Self::String(x) => panic!("cannot sub str"),
+			Self::Float(x) => match rhs {
+				Self::Float(y) => Self::Float(x - y),
+				Self::Int(y) => Self::Float(x - y as f64),
+				_ => panic!("Unknow operation"),
+			},
+		}
+	}
 }
 
 #[derive(Debug, Clone, PartialEq, Copy)]
 pub enum Prefix {
-	Not // bitwise invert
+	Not, // bitwise invert
 }
 
 #[derive(Debug, Clone, PartialEq, Copy)]
@@ -99,13 +147,13 @@ pub enum Operator {
 	And,
 	AndEq,
 	Or,
-	OrEq
+	OrEq,
 }
 
 impl Display for Prefix {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		let res = match self {
-			Self::Not => "~"
+			Self::Not => "~",
 		};
 		write!(f, "{}", res)
 	}
@@ -156,7 +204,7 @@ impl From<Token> for Operator {
 			_ => panic!(
 				"Unexpected token while converting to operator: '{:?}'",
 				value
-			)
+			),
 		}
 	}
 }
@@ -169,7 +217,7 @@ pub enum ParseError {
 	ExpectedTokenButFoundInstead(Token, Token),
 	ExpectedTokenButNotFound(Token),
 	ExpectedExprButFoundInstead(Expr, Expr),
-	ExpectedExprButNotFound(Expr)
+	ExpectedExprButNotFound(Expr),
 }
 
 impl Display for Literal {
@@ -178,7 +226,7 @@ impl Display for Literal {
 			Self::Bool(x) => x.to_string(),
 			Self::Float(x) => x.to_string(),
 			Self::Int(x) => x.to_string(),
-			Self::String(x) => format!("\"{}\"", x)
+			Self::String(x) => format!("\"{}\"", x),
 		};
 		write!(f, "{}", res)
 	}
@@ -225,7 +273,7 @@ impl Display for Operator {
 			Self::And => "&&",
 			Self::AndEq => "&&=",
 			Self::Or => "||",
-			Self::OrEq => "||="
+			Self::OrEq => "||=",
 		};
 
 		write!(f, "{}", res)
@@ -251,7 +299,7 @@ impl Display for Stmt {
 				name,
 				args,
 				t,
-				block
+				block,
 			} => format!(
 				"fn {}({}): {} {{\n{}\n}}",
 				name,
@@ -272,7 +320,7 @@ impl Display for Stmt {
 
 fn print_s<T>(vec: &Vec<T>, sep: &str) -> String
 where
-	T: Display
+	T: Display,
 {
 	vec.iter()
 		.map(|x| x.to_string())
@@ -289,7 +337,7 @@ impl Display for Expr {
 			Self::Lit(l) => format!("{}", l),
 			Self::Infix { op, lhs, rhs } => format!("({} {} {})", lhs, op, rhs),
 			Self::Prefix(prefix, e) => format!("({}{})", prefix, e),
-			Self::FnCall { expr, args } => format!("{}({})", expr, print_s(args, ", "))
+			Self::FnCall { expr, args } => format!("{}({})", expr, print_s(args, ", ")),
 		};
 		write!(f, "{}", res)
 	}
@@ -307,7 +355,7 @@ impl Display for ParseError {
 			Self::ExpectedExprButFoundInstead(a, b) => {
 				format!("Expected expression '{a:?}' but found '{b:?}' instead")
 			}
-			Self::ExpectedExprButNotFound(t) => format!("Expected expression '{t:?}'")
+			Self::ExpectedExprButNotFound(t) => format!("Expected expression '{t:?}'"),
 		};
 		write!(f, "{}", res)
 	}
