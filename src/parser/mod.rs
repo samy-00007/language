@@ -10,7 +10,6 @@ use self::ast::{Block, ParseError, Operator};
 
 pub type RetItem = (Result<Token, ()>, Range<usize>);
 pub type Item = (Token, Range<usize>);
-pub type PResult<T> = Result<T, ParseError>;
 
 pub struct Parser<'a, I>
 where
@@ -18,7 +17,9 @@ where
 {
 	tokens: Peekable<I>,
 	source: &'a str,
-	range: Range<usize> // phantom: PhantomData<&'a I>
+	range: Range<usize>,
+	// phase: ,
+	errors: Vec<(ParseError, Range<usize>)>
 }
 
 impl<'a> Parser<'a, SpannedIter<'a, Token>> {
@@ -27,7 +28,8 @@ impl<'a> Parser<'a, SpannedIter<'a, Token>> {
 		Self {
 			tokens: lex.spanned().peekable(),
 			source,
-			range: 0..0 // phantom: PhantomData
+			range: 0..0,
+			errors: Vec::new()
 		}
 	}
 }
@@ -51,12 +53,16 @@ where
 	}
 
 	pub(self) fn peek(&mut self) -> Option<Token> {
-		let next = Parser::<'a, I>::unwrap_ref(self.tokens.peek());
+		let next = self.peek_range();
 		if let Some((t, _)) = next {
 			Some(t)
 		} else {
 			None
 		}
+	}
+
+	fn peek_range(&mut self) -> Option<(Token, Range<usize>)> {
+		Parser::<'a, I>::unwrap_ref(self.tokens.peek())
 	}
 
 	pub(self) fn next(&mut self) -> Option<Token> {
@@ -77,12 +83,24 @@ where
 		self.source[self.range.clone()].to_string()
 	}
 
-	pub(self) fn consume(&mut self, expected: Token) -> PResult<()> {
-		self.next().map_or_else(|| Err(ParseError::UnexpectedEOF), |token| if token == expected {
-					Ok(())
+	pub(self) fn consume(&mut self, expected: Token) {
+		self.consume_raw(expected, false);
+	}
+
+	pub(self) fn consume_raw(&mut self, expected: Token, consume_if_error: bool) {
+		match self.peek_range() {
+			Some((token, range)) => {
+				if token == expected {
+					self.next();
 				} else {
-					Err(ParseError::ExpectedTokenButFoundInstead(expected, token))
-				})
+					self.errors.push((ParseError::ExpectedTokenButFoundInstead(expected, token), range));
+					if consume_if_error {
+						self.next();
+					}
+				}
+			},
+			None => self.push_error(ParseError::ExpectedTokenButNotFound(expected))
+		}
 	}
 
 	// utils
@@ -131,15 +149,20 @@ where
 		)
 	}
 
-	pub(self) fn get_ident(&mut self) -> PResult<String> {
-		let ident = self.next().ok_or(ParseError::UnexpectedEOF)?;
+	pub(self) fn get_ident(&mut self) -> String {
+		let Some(ident) = self.peek() else {
+			self.push_error(ParseError::UnexpectedEOF);
+			return String::new()
+		};
 		if ident == Token::Identifier {
-			Ok(self.text())
+			self.next();
+			self.text()
 		} else {
-			Err(ParseError::ExpectedTokenButFoundInstead(
+			self.push_error(ParseError::ExpectedTokenButFoundInstead(
 				Token::Identifier,
 				ident
-			))
+			));
+			String::new() // TODO: error message in string ?
 		}
 	}
 
@@ -164,10 +187,29 @@ where
 		}
 	}
 
+	#[allow(clippy::range_plus_one)]
+	pub(self) const fn eof_range(&self) -> Range<usize> {
+		let len = self.source.len();
+		len..len+1
+	}
+
+	pub(self) fn is_eof(&mut self) -> bool {
+		self.peek().is_none()
+	}
+
+	pub(self) fn push_error(&mut self, error: ParseError) {
+		let range = if error == ParseError::UnexpectedEOF {
+			self.eof_range()
+		} else {
+			self.range.clone()
+		};
+		self.errors.push((error, range));
+	}
+
 	//
 
-	pub fn parse(&mut self) -> PResult<Block> {
-		self.parse_block()
+	pub fn parse(&mut self) -> (Block, &Vec<(ParseError, Range<usize>)>) {
+		(self.parse_block(), &self.errors)
 	}
 }
 

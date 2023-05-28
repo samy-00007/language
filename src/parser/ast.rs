@@ -33,6 +33,7 @@ pub enum Stmt {
 	Return(Expr),
 	Expr(Expr),
 	FnReturn(Expr),
+	Error
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -44,6 +45,7 @@ pub enum Expr {
 	Block(Block), // FIXME: handle statements in there
 	FnCall { expr: E, args: Vec<Expr> },
 	FnNamedCall { name: String, args: Vec<Expr> },
+	Error
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
@@ -164,10 +166,13 @@ impl From<Token> for Operator {
 pub enum ParseError {
 	UnexpectedEOF,
 	UnexpectedToken(Token), // TODO: maybe store the token text ?
+	/// (expected, found)
 	ExpectedTokenButFoundInstead(Token, Token),
 	ExpectedTokenButNotFound(Token),
 	ExpectedExprButFoundInstead(Expr, Expr),
 	ExpectedExprButNotFound(Expr),
+	IntParseError(String),
+	FloatParseError(String),
 }
 
 impl Display for Literal {
@@ -258,7 +263,8 @@ impl Display for Stmt {
 			),
 			Self::While { cond, block } => {
 				format!("while ({}) {{\n{}\n}}", cond, print_s(block, "\n"))
-			}
+			},
+			Self::Error => "<STMT ERROR>".to_string()
 		};
 		write!(f, "{res}")
 	}
@@ -284,6 +290,7 @@ impl Display for Expr {
 			Self::Infix { op, lhs, rhs } => format!("({lhs} {op} {rhs})"),
 			Self::Prefix(prefix, e) => format!("({prefix}{e})"),
 			Self::FnCall { expr, args } => format!("{}({})", expr, print_s(args, ", ")),
+			Self::Error => "<EXPR ERROR>".to_string()
 		};
 		write!(f, "{res}")
 	}
@@ -302,6 +309,8 @@ impl Display for ParseError {
 				format!("Expected expression '{a:?}' but found '{b:?}' instead")
 			}
 			Self::ExpectedExprButNotFound(t) => format!("Expected expression '{t:?}'"),
+			Self::IntParseError(s) => format!("Could not parse '{s}' into an int"),
+			Self::FloatParseError(s) => format!("Could not parse '{s}' into an float"),
 		};
 		write!(f, "{res}")
 	}

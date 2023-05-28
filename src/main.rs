@@ -44,16 +44,23 @@ fn main() {
 
 fn main() {
 	
+	// let mut parser = Parser::new("
+	// let a = 1;
+	// let b = a + 2 * 3;
+	// {
+	// 	let c = 25;
+	// 	print(a + b + c);
+	// };
+	// print(a * b);
+	// ");
 	let mut parser = Parser::new("
-	let a = 1;
-	let b = a + 2 * 3;
-	{
-		let c = 25;
-		print(a + b + c);
-	};
-	print(a * b);
-	");
-	let parsed = parser.parse().unwrap();
+	// let abcd ( 10
+	// print(abcd;
+	fn test(): abcd {
+
+	}		
+");
+	let parsed = parser.parse();
 	// let res = compile(parsed);
 
 	println!("{parsed:?}");

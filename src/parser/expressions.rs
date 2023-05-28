@@ -1,27 +1,20 @@
 use super::ast::{Block, Expr, Literal, ParseError, Stmt};
-use super::{PResult, Parser, RetItem};
+use super::{Parser, RetItem};
 use crate::lexer::Token;
 
 impl<'a, I> Parser<'a, I>
 where
 	I: Iterator<Item = RetItem>
 {
-	fn parse_ident(&mut self) -> PResult<Expr> {
+	fn parse_ident(&mut self) -> Expr {
 		if self.at(Token::LParen) {
 			let name = self.text();
 			self.next();
-			let mut args = Vec::new();
-
-			while !self.at(Token::RParen) {
-				args.push(self.parse_expression(0)?);
-				if self.at(Token::Comma) {
-					self.next();
-				}
-			}
-			self.next();
-			Ok(Expr::FnNamedCall { name, args })
+			let args = self.parse_list(false, Token::RParen);
+			self.consume(Token::RParen);
+			Expr::FnNamedCall { name, args }
 		} else {
-			Ok(Expr::Ident(self.text()))
+			Expr::Ident(self.text())
 		}
 	}
 
@@ -31,7 +24,10 @@ where
 				let text = self.text();
 				Expr::Lit(Literal::Int(
 					text.parse()
-						.unwrap_or_else(|_| panic!("invalid integer: {}", text))
+						.unwrap_or_else(|_| {
+							self.push_error(ParseError::IntParseError(text)); // FIXME: parse nums with e (e.g 10e2)
+							0
+						})
 				))
 			}
 			Token::Float => {
@@ -39,8 +35,11 @@ where
 				Expr::Lit(Literal::Float(
 					//f128::f128::parse(&text)
 					text.parse()
-						.unwrap_or_else(|_| panic!("invalid float: {}", text)) // shouldn't happen
-				))
+						.unwrap_or_else(|_| {
+							self.push_error(ParseError::FloatParseError(text));
+							0.
+						})
+					))
 			}
 			Token::True => Expr::Lit(Literal::Bool(true)),
 			Token::False => Expr::Lit(Literal::Bool(false)),
@@ -53,18 +52,18 @@ where
 		}
 	}
 
-	pub(super) fn parse_block(&mut self) -> PResult<Block> {
+	pub(super) fn parse_block(&mut self) -> Block {
 		let mut stmts = Vec::new();
 		while !matches!(self.peek(), Some(Token::RBrace) | None) {
-			let expr = self.parse_statement()?;
+			let stmt = self.parse_statement();
 
-			if matches!(expr, Stmt::Return(_)) {
-				stmts.push(expr);
+			if matches!(stmt, Stmt::Return(_)) {
+				stmts.push(stmt);
 				break;
 			}
-			stmts.push(expr);
+			stmts.push(stmt);
 		}
-		Ok(stmts)
+		stmts
 	}
 
 	/// Parse a list of expression / arguments
@@ -77,65 +76,110 @@ where
 	///
 	/// ```
 	// FIXME: parse something else than ident, like `object.property`
-	pub(super) fn parse_fn_args(&mut self, end_token: Token) -> PResult<Vec<(String, String)>> {
+	pub(super) fn parse_fn_args(&mut self, end_token: Token) -> Vec<(String, String)> {
 		let mut args = Vec::new();
-		while !self.at(end_token) {
-			let arg = self.get_ident()?;
-			self.consume(Token::Colon)?;
-			let t = self.get_ident()?;
+		loop {
+			let peek = self.peek();
+			match peek {
+				None => {
+					self.push_error(ParseError::UnexpectedEOF);
+					break;
+				},
+				Some(x) => {
+					if x == end_token || x == Token::SemiColon {
+						break
+					}
+				}
+			}
+	
+			let arg = self.get_ident();
+			self.consume(Token::Colon);
+			let t = self.get_ident();
 			args.push((arg, t));
-			if self.at(Token::Comma) {
+			if !self.at(end_token) {
+				self.consume(Token::Comma);
+			} else if self.at(Token::Comma) { // trailing comma
 				self.next();
 			}
+			if self.is_eof() {
+				self.push_error(ParseError::UnexpectedEOF);
+				break;
+			}
 		}
-		Ok(args)
+		args
 	}
 
-	pub(super) fn parse_list(&mut self, only_idents: bool, end_token: Token) -> PResult<Vec<Expr>> {
+	pub(super) fn parse_list(&mut self, only_idents: bool, end_token: Token) -> Vec<Expr> {
 		let mut args = Vec::new();
-		while !self.at(end_token) {
-			let arg = self.parse_expression(0)?;
+		loop {
+			let peek = self.peek();
+			match peek {
+				None => {
+					self.push_error(ParseError::UnexpectedEOF);
+					break;
+				},
+				Some(x) => {
+					if x == end_token || x == Token::SemiColon {
+						break
+					}
+				}
+			}
+
+			let arg = self.parse_expression(0);
 			if only_idents && !matches!(arg, Expr::Ident(_)) {
-				return Err(ParseError::ExpectedExprButFoundInstead(
+				self.push_error(ParseError::ExpectedExprButFoundInstead(
 					Expr::Ident(String::new()),
 					arg
 				));
+				args.push(Expr::Error);
+			} else {
+				args.push(arg);
 			}
-			args.push(arg);
-			if self.at(Token::Comma) {
+			if !self.at(end_token) {
+				self.consume(Token::Comma);
+			} else if self.at(Token::Comma) { // trailing comma
 				self.next();
 			}
+			if self.is_eof() {
+				self.push_error(ParseError::UnexpectedEOF);
+				break;
+			}
 		}
-		Ok(args)
+		args
 	}
 
-	pub fn parse_fn_call(&mut self, lhs: Expr) -> PResult<Expr> {
+	pub fn parse_fn_call(&mut self, lhs: Expr) -> Expr {
 		self.next(); // known to be Token::LParen
-		let args = self.parse_list(true, Token::RParen)?;
-		Ok(Expr::FnCall {
+		let args = self.parse_list(true, Token::RParen);
+		self.next();
+		Expr::FnCall {
 			expr: Box::new(lhs),
 			args
-		})
+		}
 	}
 
-	pub fn parse_expression(&mut self, precedence: usize) -> PResult<Expr> {
-		let next = self.next().ok_or(ParseError::UnexpectedEOF)?;
+	pub fn parse_expression(&mut self, precedence: usize) -> Expr {
+		let Some(next) = self.next() else {
+			self.push_error(ParseError::UnexpectedEOF);
+			return Expr::Error
+		};
 
 		let mut lhs = {
 			if Self::is_ident(next) {
-				self.parse_ident()?
+				self.parse_ident()
 			} else if Self::is_lit(next) {
 				self.parse_lit(next)
 			} else if next == Token::LParen {
-				let expr = self.parse_expression(0)?;
-				self.consume(Token::RParen)?;
+				let expr = self.parse_expression(0);
+				self.consume(Token::RParen);
 				expr
 			} else if next == Token::LBrace {
-				let blk = self.parse_block()?;
-				self.consume(Token::RBrace)?;
+				let blk = self.parse_block();
+				self.consume(Token::RBrace);
 				Expr::Block(blk)
 			} else {
-				return Err(ParseError::UnexpectedToken(next));
+				self.push_error(ParseError::UnexpectedToken(next));
+				Expr::Error
 			}
 		};
 
@@ -145,10 +189,10 @@ where
 					let op = peek.into();
 					let r_precedence = Self::operator_precedence(op);
 					if precedence >= r_precedence {
-						return Ok(lhs);
+						return lhs;
 					}
 					self.next();
-					let rhs = self.parse_expression(r_precedence)?;
+					let rhs = self.parse_expression(r_precedence);
 					lhs = Expr::Infix {
 						// FIXME: priorities
 						op,
@@ -156,12 +200,12 @@ where
 						rhs: Box::new(rhs)
 					};
 				} else if peek == Token::LParen {
-					lhs = self.parse_fn_call(lhs)?;
+					lhs = self.parse_fn_call(lhs);
 				} else {
-					return Ok(lhs);
+					return lhs;
 				}
 			} else {
-				return Ok(lhs);
+				return lhs;
 			}
 		}
 	}
@@ -172,7 +216,7 @@ mod tests {
 	use crate::{
 		lexer::Token,
 		parser::{
-			ast::{Expr, Literal, Operator, ParseError, Stmt},
+			ast::{Expr, Literal, Operator, Stmt},
 			Parser
 		}
 	};
@@ -180,7 +224,7 @@ mod tests {
 	#[test]
 	fn parse_args() {
 		let mut parser = Parser::new("abcd, efgh, uch65)");
-		let args = parser.parse_list(true, Token::RParen).unwrap();
+		let args = parser.parse_list(true, Token::RParen);
 		assert_eq!(
 			args,
 			vec![
@@ -191,7 +235,7 @@ mod tests {
 		);
 
 		let mut parser = Parser::new("5, {print(\"test\"); 5}, abcd)");
-		let args = parser.parse_list(false, Token::RParen).unwrap();
+		let args = parser.parse_list(false, Token::RParen);
 		assert_eq!(
 			args,
 			vec![
@@ -208,7 +252,7 @@ mod tests {
 		);
 
 		let mut parser = Parser::new("abcd: number, efgh: bool, uch65: string)");
-		let args = parser.parse_fn_args(Token::RParen).unwrap();
+		let args = parser.parse_fn_args(Token::RParen);
 		assert_eq!(
 			args,
 			vec![
@@ -222,7 +266,11 @@ mod tests {
 	#[test]
 	fn parse_float() {
 		let mut parser = Parser::new("3.5 4.7 7.2");
-		while let Ok(x) = parser.parse_expression(0) {
+		loop {
+			let x = parser.parse_expression(0);
+			if x == Expr::Error { // FIXME:
+				break
+			}
 			// can't compare them precisely because they're floats
 			assert!(matches!(x, Expr::Lit(Literal::Float(_))));
 		}
@@ -238,7 +286,11 @@ mod tests {
 			Expr::Lit(Literal::Bool(false)),
 		];
 		let mut parsed = Vec::new();
-		while let Ok(x) = parser.parse_expression(0) {
+		loop {
+			let x = parser.parse_expression(0);
+			if x == Expr::Error {
+				break
+			}
 			parsed.push(x);
 		}
 
@@ -257,7 +309,11 @@ mod tests {
 			Expr::Ident("test".to_string()),
 		];
 		let mut parsed = Vec::new();
-		while let Ok(x) = parser.parse_expression(0) {
+		loop {
+			let x = parser.parse_expression(0);
+			if x == Expr::Error {
+				break
+			}
 			parsed.push(x);
 		}
 
@@ -292,7 +348,7 @@ mod tests {
 		];
 		for (string, expected) in strs {
 			let mut parser = Parser::new(string);
-			let res = parser.parse_block().unwrap();
+			let res = parser.parse_block();
 
 			assert_eq!(res, expected);
 		}
@@ -382,13 +438,8 @@ mod tests {
 		loop {
 			let x = parser.parse_expression(0);
 			match x {
-				Ok(x) => parsed.push(x),
-				Err(ParseError::UnexpectedEOF) => break,
-				Err(x) => {
-					eprintln!("{x}");
-					eprintln!("{:?}", parser.range);
-					panic!()
-				}
+				Expr::Error => break, // FIXME:
+				_ => parsed.push(x)
 			}
 		}
 
@@ -407,7 +458,11 @@ mod tests {
 			"((a && b) && c)"
 		];
 		let mut parsed = Vec::new();
-		while let Ok(x) = parser.parse_expression(0) {
+		loop {
+			let x = parser.parse_expression(0);
+			if x == Expr::Error {
+				break
+			}
 			parsed.push(x.to_string());
 		}
 

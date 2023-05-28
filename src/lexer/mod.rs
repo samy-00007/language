@@ -1,13 +1,13 @@
 use logos::{FilterResult, Lexer, Logos};
 
-#[derive(Logos, Debug, PartialEq, Clone, Copy)]
+#[derive(Logos, Debug, PartialEq, Eq, Clone, Copy)]
 #[logos(skip r"[ \t\n]+")]
 pub enum Token {
 	#[regex("[A-Za-z_][A-Za-z_0-9]*")] // TODO: maybe support unicode ?
 	Identifier,
 	#[regex(r#""([^"\\]|\\t|\\u|\\n|\\")*""#)]
 	String,
-	#[regex(r"[0-9][0-9_]*(\.[0-9_]+)([eE][\+-]?[0-9_]+)?", priority = 2)] // TODO: expand that
+	#[regex(r"[0-9][0-9_]*(\.[0-9_]+)([eE][\+-]?[0-9_]+)?", priority = 2)] // FIXME: parse nums with e
 	Float,
 	#[regex(r"[0-9][0-9_]*([eE][\+-]?[0-9_]+)?", priority = 2)]
 	// TODO: expand that (0x, 0b, ...)
