@@ -145,7 +145,7 @@ where
 	pub(self) const fn is_keyword(token: Token) -> bool {
 		matches!(
 			token,
-			Token::Fn | Token::Let | Token::If | Token::For | Token::While
+			Token::Fn | Token::Let | Token::If | Token::For | Token::While | Token::Return
 		)
 	}
 

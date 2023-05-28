@@ -222,8 +222,7 @@ impl From<Operator> for Token {
 			Operator::Or => Self::Or,
 			Operator::OrEq => Self::OrEq,
 			Operator::Gt => Self::RChevron,
-			Operator::Lt => Self::LChevron,
-			_ => unreachable!()
+			Operator::Lt => Self::LChevron
 		}
 	}
 }

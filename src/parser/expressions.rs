@@ -178,7 +178,7 @@ where
 				self.consume(Token::RBrace);
 				Expr::Block(blk)
 			} else if Self::is_op(next) {
-				let expr = self.parse_expression(0);
+				let expr = self.parse_expression(50); // arbitrary, just to only apply the prefix to the next literal
 				let op: Operator = next.into();
 				let op = op.try_into().unwrap_or_else(|e| {self.push_error(e); Prefix::Err});
 				Expr::Prefix(op, Box::new(expr))

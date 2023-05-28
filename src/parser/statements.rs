@@ -89,13 +89,17 @@ where
 		Stmt::While { cond, block }
 	}
 
+	fn parse_return(&mut self) -> Stmt {
+		Stmt::FnReturn(self.parse_expression(0))
+	}
+
 	pub fn parse_statement(&mut self) -> Stmt {
-		let peek = match self.peek() {
-			None => {
-				self.push_error(ParseError::UnexpectedEOF);
-				return Stmt::Error
-			},
-			Some(x) => x
+		while self.at(Token::SemiColon) {
+			self.next(); // a bit janky
+		}
+		let Some(peek) = self.peek() else {
+			self.push_error(ParseError::UnexpectedEOF);
+			return Stmt::Error
 		};
 
 		if Self::is_keyword(peek) {
@@ -105,6 +109,7 @@ where
 				Token::Fn => self.parse_fn_stmt(),
 				Token::If => self.parse_if(),
 				Token::While => self.parse_while(),
+				Token::Return => self.parse_return(),
 				x => todo!("token '{:?}' unhandled (statement)", x)
 			}
 		} else {

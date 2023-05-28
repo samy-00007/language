@@ -24,6 +24,8 @@ pub enum Token {
 	For,
 	#[token("fn")]
 	Fn,
+	#[token("return")]
+	Return,
 
 	#[token("true")]
 	True,
