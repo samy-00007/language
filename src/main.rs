@@ -54,11 +54,9 @@ fn main() {
 	// print(a * b);
 	// ");
 	let mut parser = Parser::new("
-	// let abcd ( 10
-	// print(abcd;
-	fn test(): abcd {
-
-	}		
+	let abcd ( -10
+	print(abcd;
+		
 ");
 	let parsed = parser.parse();
 	// let res = compile(parsed);

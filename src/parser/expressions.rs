@@ -1,4 +1,4 @@
-use super::ast::{Block, Expr, Literal, ParseError, Stmt};
+use super::ast::{Block, Expr, Literal, ParseError, Stmt, Operator, Prefix};
 use super::{Parser, RetItem};
 use crate::lexer::Token;
 
@@ -177,6 +177,11 @@ where
 				let blk = self.parse_block();
 				self.consume(Token::RBrace);
 				Expr::Block(blk)
+			} else if Self::is_op(next) {
+				let expr = self.parse_expression(0);
+				let op: Operator = next.into();
+				let op = op.try_into().unwrap_or_else(|e| {self.push_error(e); Prefix::Err});
+				Expr::Prefix(op, Box::new(expr))
 			} else {
 				self.push_error(ParseError::UnexpectedToken(next));
 				Expr::Error

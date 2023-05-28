@@ -14,21 +14,21 @@ pub enum Stmt {
 		// var decl
 		name: String,
 		t: Option<String>,
-		val: E,
+		val: E
 	},
 	Function {
 		name: String,
 		args: Vec<(String, String)>,
 		t: String,
-		block: Block,
+		block: Block
 	},
 	If {
 		cond: Expr,
-		block: Block,
+		block: Block
 	},
 	While {
 		cond: Expr,
-		block: Block,
+		block: Block
 	},
 	Return(Expr),
 	Expr(Expr),
@@ -53,13 +53,16 @@ pub enum Literal {
 	Int(i128),
 	Float(f64), // TODO: test that
 	Bool(bool),
-	String(String),
+	String(String)
 }
-
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub enum Prefix {
-	Not, // bitwise invert
+	Not,    // boolean invert
+	BitNot, // bitwise invert
+	Plus,
+	Minus,
+	Err
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
@@ -102,15 +105,32 @@ pub enum Operator {
 	And,
 	AndEq,
 	Or,
-	OrEq,
+	OrEq
 }
 
 impl Display for Prefix {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		let res = match self {
-			Self::Not => "~",
+			Self::BitNot => "~",
+			Self::Not => "!",
+			Self::Minus => "-",
+			Self::Plus => "+",
+			Self::Err => "<PREFIX ERROR>"
 		};
 		write!(f, "{res}")
+	}
+}
+
+impl TryFrom<Operator> for Prefix {
+	type Error = ParseError;
+	fn try_from(value: Operator) -> Result<Self, Self::Error> {
+		Ok(match value {
+			Operator::Add => Self::Plus,
+			Operator::Sub => Self::Minus,
+			Operator::BitNot => Self::BitNot,
+			Operator::Not => Self::Not,
+			_ => return Err(ParseError::UnexpectedToken(value.into()))
+		})
 	}
 }
 
@@ -156,7 +176,54 @@ impl From<Token> for Operator {
 			Token::OrEq => Self::OrEq,
 			Token::RChevron => Self::Gt,
 			Token::LChevron => Self::Lt,
-			_ => unreachable!(),
+			_ => unreachable!()
+		}
+	}
+}
+
+impl From<Operator> for Token {
+	fn from(value: Operator) -> Self {
+		match value {
+			Operator::Assign => Self::Eq,
+
+			Operator::Add => Self::Plus,
+			Operator::AddEq => Self::PlusEq,
+			Operator::Sub => Self::Minus,
+			Operator::SubEq => Self::MinusEq,
+			Operator::Mul => Self::Asterisk,
+			Operator::MulEq => Self::AsteriskEq,
+			Operator::Exponent => Self::DoubleAsterisk,
+			Operator::ExponentEq => Self::DoubleAsteriskEq,
+			Operator::Div => Self::Slash,
+			Operator::DivEq => Self::SlashEq,
+			Operator::Rem => Self::Percent,
+			Operator::RemEq => Self::PercentEq,
+			Operator::Not => Self::ExclamationMark,
+
+			Operator::BitNot => Self::Tilde,
+			Operator::BitNotEq => Self::TildeEq,
+			Operator::BitAnd => Self::Anpersand,
+			Operator::BitAndEq => Self::AnpersandEq,
+			Operator::BitOr => Self::Bar,
+			Operator::BitOrEq => Self::BarEq,
+			Operator::BitXor => Self::Caret,
+			Operator::BitXorEq => Self::CaretEq,
+			Operator::LShift => Self::LShift,
+			Operator::LShiftEq => Self::LShiftEq,
+			Operator::RShift => Self::RShift,
+			Operator::RShiftEq => Self::RShiftEq,
+
+			Operator::Eq => Self::DoubleEq,
+			Operator::Gte => Self::Gte,
+			Operator::Lte => Self::Lte,
+			Operator::Neq => Self::Neq,
+			Operator::And => Self::And,
+			Operator::AndEq => Self::AndEq,
+			Operator::Or => Self::Or,
+			Operator::OrEq => Self::OrEq,
+			Operator::Gt => Self::RChevron,
+			Operator::Lt => Self::LChevron,
+			_ => unreachable!()
 		}
 	}
 }
@@ -172,7 +239,7 @@ pub enum ParseError {
 	ExpectedExprButFoundInstead(Expr, Expr),
 	ExpectedExprButNotFound(Expr),
 	IntParseError(String),
-	FloatParseError(String),
+	FloatParseError(String)
 }
 
 impl Display for Literal {
@@ -181,7 +248,7 @@ impl Display for Literal {
 			Self::Bool(x) => x.to_string(),
 			Self::Float(x) => x.to_string(),
 			Self::Int(x) => x.to_string(),
-			Self::String(x) => format!("\"{x}\""),
+			Self::String(x) => format!("\"{x}\"")
 		};
 		write!(f, "{res}")
 	}
@@ -228,7 +295,7 @@ impl Display for Operator {
 			Self::And => "&&",
 			Self::AndEq => "&&=",
 			Self::Or => "||",
-			Self::OrEq => "||=",
+			Self::OrEq => "||="
 		};
 
 		write!(f, "{res}")
@@ -250,7 +317,7 @@ impl Display for Stmt {
 				name,
 				args,
 				t,
-				block,
+				block
 			} => format!(
 				"fn {}({}): {} {{\n{}\n}}",
 				name,
@@ -263,7 +330,7 @@ impl Display for Stmt {
 			),
 			Self::While { cond, block } => {
 				format!("while ({}) {{\n{}\n}}", cond, print_s(block, "\n"))
-			},
+			}
 			Self::Error => "<STMT ERROR>".to_string()
 		};
 		write!(f, "{res}")
@@ -272,7 +339,7 @@ impl Display for Stmt {
 
 fn print_s<T>(vec: &[T], sep: &str) -> String
 where
-	T: Display,
+	T: Display
 {
 	vec.iter()
 		.map(std::string::ToString::to_string)
@@ -310,7 +377,7 @@ impl Display for ParseError {
 			}
 			Self::ExpectedExprButNotFound(t) => format!("Expected expression '{t:?}'"),
 			Self::IntParseError(s) => format!("Could not parse '{s}' into an int"),
-			Self::FloatParseError(s) => format!("Could not parse '{s}' into an float"),
+			Self::FloatParseError(s) => format!("Could not parse '{s}' into an float")
 		};
 		write!(f, "{res}")
 	}
