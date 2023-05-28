@@ -28,7 +28,7 @@ pub fn compile_block(prog: Vec<Stmt>) -> (Vec<u8>, Vec<Literal>) {
 				bytecode.push(i as u8);
 			}
 			Stmt::Expr(e) => {
-				compile_expr(e, &mut bytecode, &mut constants, &mut constants_ci, &mut ci)
+				compile_expr(e, &mut bytecode, &mut constants, &mut constants_ci, &mut ci);
 			}
 			_ => todo!()
 		};
@@ -69,7 +69,7 @@ fn compile_expr(
 					match *lhs {
 						Expr::Ident(s) => {
 							let i = get_const_id(s, constants_ci);
-							// bytecode.push(Opcode::DefGlob.into());
+							bytecode.push(Opcode::DefGlob.into());
 							//bytecode.push(Opcode::C)
 							bytecode.push(i as u8);
 						}
