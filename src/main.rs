@@ -14,7 +14,7 @@ use std::collections::HashMap;
 use parser::Parser;
 use execute::stack_bytecode::{
 	vm::Vm,
-	compiler::compile_block
+	compiler::compile
 };
 
 /* 
@@ -62,11 +62,15 @@ fn main() {
 
 	let mut parser = Parser::new("
 	let a = 1;
-	a = a + 2 * 3;
-	print(a);
+	let b = a + 2 * 3;
+	{
+		let c = 25;
+		print(a + b + c);
+	};
+	print(a * b);
 	");
 	let parsed = parser.parse().unwrap();
-	let res = compile_block(parsed);
+	let res = compile(parsed);
 
 	println!("{res:?}");
 

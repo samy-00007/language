@@ -19,7 +19,8 @@ pub struct Vm {
 	program: Vec<u8>,
 	constants: Vec<Literal>,
 	ci: usize,
-	globals: HashMap<String, Literal>
+	globals: HashMap<String, Literal>,
+	locals: Vec<Literal>
 }
 
 impl Vm {
@@ -30,7 +31,8 @@ impl Vm {
 			program,
 			constants,
 			ci: 0,
-			globals: HashMap::new()
+			globals: HashMap::new(),
+			locals: Vec::new()
 		}
 	}
 
@@ -84,8 +86,29 @@ impl Vm {
 						}
 						_ => panic!("var name must be a string (2)")
 					}
+				},
+				Opcode::SetLocal => {
+					// println!("{}", self.pc);
+					let i = self.next_u8();
+					let val = self.stack.pop().unwrap();
+					if i as usize == self.locals.len() {
+						self.locals.push(val);
+					} else {
+						// println!("{}", self.pc);
+						self.locals[i as usize] = val;
+					}
+				},
+				Opcode::GetLocal => {
+					let i = self.next_u8();
+					let val = self.locals[i as usize].clone();
+					self.stack.push(val);
+				},
+				Opcode::UnsetLocal => {
+					let n = self.next_u8();
+					let new_len = self.locals.len().saturating_sub(n as usize);
+					self.locals.truncate(new_len);
 				}
-				_ => {
+				Opcode::Igl => {
 					eprintln!("Unknown opcode found. Terminating.");
 					return;
 				}

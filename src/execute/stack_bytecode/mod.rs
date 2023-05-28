@@ -19,6 +19,8 @@ pub enum Opcode {
 	Print,
 	DefGlob,
 	GetGlob,
+	SetLocal,
+	UnsetLocal,
 	GetLocal,
 	Igl // illegal
 }
@@ -37,7 +39,9 @@ impl From<u8> for Opcode {
 			7 => Self::Print,
 			8 => Self::DefGlob,
 			9 => Self::GetGlob,
-			10 => Self::GetLocal,
+			10 => Self::SetLocal,
+			11 => Self::UnsetLocal,
+			12 => Self::GetLocal,
 			_ => Self::Igl
 		}
 	}
@@ -56,7 +60,9 @@ impl From<Opcode> for u8 {
 			Opcode::Print => 7,
 			Opcode::DefGlob => 8,
 			Opcode::GetGlob => 9,
-			Opcode::GetLocal => 10,
+			Opcode::SetLocal => 10,
+			Opcode::UnsetLocal => 11,
+			Opcode::GetLocal => 12,
 			Opcode::Igl => 255
 		}
 	}
