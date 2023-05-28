@@ -1,3 +1,7 @@
+#![allow(clippy::pedantic)]
+#![allow(clippy::nursery)]
+#![allow(dead_code)]
+
 use super::{assembler::Assembler, Opcode};
 use crate::parser::ast::{Expr, Literal, Operator, Stmt};
 use std::collections::HashMap;

@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::collections::HashMap;
 use crate::parser::ast::Literal;
 use super::Opcode;

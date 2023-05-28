@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use super::Opcode;
 
 macro_rules! add_n {
@@ -12,7 +14,7 @@ macro_rules! add_n {
 pub struct Assembler(pub Vec<u8>);
 
 impl Assembler {
-	pub fn new() -> Self {
+	pub const fn new() -> Self {
 		Self(Vec::new())
 	}
 

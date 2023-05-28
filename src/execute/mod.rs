@@ -1,3 +1,5 @@
+#![allow(clippy::cast_precision_loss)]
+
 use crate::parser::ast::Literal;
 use std::ops::{Add, Div, Mul, Neg, Sub};
 
@@ -58,7 +60,7 @@ impl Neg for Literal {
 	type Output = Self;
 
 	fn neg(self) -> Self::Output {
-		Literal::Int(0) - self
+		Self::Int(0) - self
 	}
 }
 

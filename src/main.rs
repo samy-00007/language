@@ -3,14 +3,11 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 // #![warn(clippy::cargo)]
+
 mod lexer;
 mod parser;
 mod execute;
 
-use std::collections::HashMap;
-
-// use lexer::Token;
-// use logos::Logos;
 use parser::Parser;
 use execute::stack_bytecode::{
 	vm::Vm,
@@ -46,20 +43,6 @@ fn main() {
 
 
 fn main() {
-	/*let constants = vec![Literal::String("abcd".to_string()), Literal::Float(7.5)];
-	let p = vec![
-		Opcode::Const,
-		Opcode::Const, // 1
-		Opcode::DefGlob,
-		Opcode::Hlt,
-		Opcode::Hlt
-	].into_iter().map(std::convert::Into::into).collect();
-	let mut prog = Program::new(p, constants);
-
-	prog.run();
-
-	println!("{prog:?}");*/
-
 	let mut parser = Parser::new("
 	let a = 1;
 	let b = a + 2 * 3;
