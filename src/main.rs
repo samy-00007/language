@@ -6,13 +6,13 @@
 
 mod lexer;
 mod parser;
-mod execute;
+// mod execute;
 
 use parser::Parser;
-use execute::stack_bytecode::{
+/*use execute::stack_bytecode::{
 	vm::Vm,
 	compiler::compile
-};
+};*/
 
 /* 
 fn main() {
@@ -43,6 +43,7 @@ fn main() {
 
 
 fn main() {
+	
 	let mut parser = Parser::new("
 	let a = 1;
 	let b = a + 2 * 3;
@@ -53,12 +54,14 @@ fn main() {
 	print(a * b);
 	");
 	let parsed = parser.parse().unwrap();
-	let res = compile(parsed);
+	// let res = compile(parsed);
 
-	println!("{res:?}");
+	println!("{parsed:?}");
+/*
+let mut prog = Vm::new(res.0, res.1);
 
-	let mut prog = Vm::new(res.0, res.1);
-
-	prog.run();
-	println!("{prog:?}");
+prog.run();
+println!("{prog:?}");
+*/
+	
 }

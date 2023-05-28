@@ -5,6 +5,7 @@ use std::ops::{Add, Div, Mul, Neg, Sub};
 
 pub mod stack_bytecode;
 pub mod walker;
+pub mod register_bytecode;
 
 impl Add for Literal {
 	type Output = Self;
