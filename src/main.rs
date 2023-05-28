@@ -11,8 +11,11 @@ use std::collections::HashMap;
 
 // use lexer::Token;
 // use logos::Logos;
-use parser::{Parser, ast::Literal};
-use execute::stack_bytecode::{Program, Opcode};
+use parser::Parser;
+use execute::stack_bytecode::{
+	vm::Vm,
+	compiler::compile_block
+};
 
 /* 
 fn main() {
@@ -63,12 +66,12 @@ fn main() {
 	print(a);
 	");
 	let parsed = parser.parse().unwrap();
-	let res = execute::stack_bytecode::compile_block(parsed);
+	let res = compile_block(parsed);
 
-	println!("{:?}", res);
+	println!("{res:?}");
 
-	let mut prog = Program::new(res.0, res.1);
+	let mut prog = Vm::new(res.0, res.1);
 
 	prog.run();
-	println!("{:?}", prog);
+	println!("{prog:?}");
 }
