@@ -7,9 +7,9 @@ use super::Opcode;
 macro_rules! op {
 	($self:ident, $op:tt) => {
 		{
-			let b = $self.stack.pop().unwrap();
-			let a = $self.stack.pop().unwrap();
-			$self.stack.push((a $op b))
+			let b = $self.pop_stack();
+			let a = $self.pop_stack();
+			$self.push_stack((a $op b))
 		}
 	};
 }
@@ -48,6 +48,14 @@ impl Vm {
 		self.constants[i].clone()
 	}
 
+	fn push_stack(&mut self, x: Literal) {
+		self.stack.push(x);
+	}
+
+	fn pop_stack(&mut self) -> Literal {
+		self.stack.pop().unwrap()
+	}
+
 	pub fn run(&mut self) {
 		loop {
 			if self.pc >= self.program.len() {
@@ -60,26 +68,26 @@ impl Vm {
 				}
 				Opcode::Const => {
 					let constant = self.next_constant();
-					self.stack.push(constant);
+					self.push_stack(constant);
 				}
 				Opcode::Neg => {
-					let old = self.stack.pop().unwrap();
+					let old = self.pop_stack();
 					// ideally unreachable!() with type check at compile time instead of runtime
-					self.stack.push(-old);
+					self.push_stack(-old);
 				}
 				Opcode::Add => op!(self, +),
 				Opcode::Sub => op!(self, -),
 				Opcode::Mul => op!(self, *),
 				Opcode::Div => op!(self, /),
 				Opcode::Lt => {
-					let b = self.stack.pop().unwrap();
-					let a = self.stack.pop().unwrap();
-					self.stack.push(Literal::Bool(a < b))
+					let b = self.pop_stack();
+					let a = self.pop_stack();
+					self.push_stack(Literal::Bool(a < b));
 				}
-				Opcode::Print => println!("{}", self.stack.pop().unwrap()),
+				Opcode::Print => println!("{}", self.pop_stack()),
 				Opcode::DefGlob => {
 					let constant = self.next_constant();
-					let val = self.stack.pop().unwrap();
+					let val = self.pop_stack();
 					match constant {
 						Literal::String(s) => self.globals.insert(s, val),
 						_ => panic!("var name must be a string")
@@ -89,7 +97,7 @@ impl Vm {
 					let constant = self.next_constant();
 					match constant {
 						Literal::String(s) => {
-							self.stack.push(self.globals.get(&s).unwrap().clone());
+							self.push_stack(self.globals.get(&s).unwrap().clone());
 						}
 						_ => panic!("var name must be a string (2)")
 					}
@@ -97,7 +105,7 @@ impl Vm {
 				Opcode::SetLocal => {
 					// println!("{}", self.pc);
 					let i = self.next_u8();
-					let val = self.stack.pop().unwrap();
+					let val = self.pop_stack();
 					if i as usize == self.locals.len() {
 						self.locals.push(val);
 					} else {
@@ -108,7 +116,7 @@ impl Vm {
 				Opcode::GetLocal => {
 					let i = self.next_u8();
 					let val = self.locals[i as usize].clone();
-					self.stack.push(val);
+					self.push_stack(val);
 				},
 				Opcode::UnsetLocal => {
 					let n = self.next_u8();
@@ -121,10 +129,10 @@ impl Vm {
 						.duration_since(std::time::UNIX_EPOCH)
 						.expect("Time went backwards");
 					let ms = since_the_epoch.as_millis() as i128;
-					self.stack.push(Literal::Int(ms));
+					self.push_stack(Literal::Int(ms));
 				},
 				Opcode::Jmpn => {
-					let cond = self.stack.pop().unwrap();
+					let cond = self.pop_stack();
 					let add = self.next_u8();
 					if cond == Literal::Bool(false) {
 						self.pc = add as usize;
