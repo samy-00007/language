@@ -1,6 +1,7 @@
 #![allow(clippy::cast_precision_loss)]
 #![allow(dead_code)]
-use std::collections::HashMap;
+// use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 
 use crate::parser::ast::{Expr, Literal, Operator, Stmt};
 
@@ -72,7 +73,7 @@ fn eval_expr(expr: Expr, locals: &mut HashMap<String, Literal>, args: [usize; 2]
 			x => todo!("{:?}", x)
 		},
 		Expr::Ident(x) => return get_val(x.as_str(), locals, args),
-		Expr::FnNamedCall { name, args: _ } => {
+		Expr::FnNamedCall { name, args: argus } => {
 			if name == "clock" {
 				let now = std::time::SystemTime::now();
 				let since_the_epoch = now
@@ -80,6 +81,9 @@ fn eval_expr(expr: Expr, locals: &mut HashMap<String, Literal>, args: [usize; 2]
         			.expect("Time went backwards");
 				let ms = since_the_epoch.as_millis() as i128;
 				return Literal::Int(ms)
+			} else if name == "print" {
+				let r = eval_expr(argus[0].clone(), locals, args);
+				println!("{r}");
 			}
 		},
 		x => todo!("{:?}", x)
