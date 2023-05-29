@@ -62,10 +62,27 @@ fn eval_expr(expr: Expr, locals: &mut HashMap<String, Literal>, args: [usize; 2]
 				//println!("sub {} {}", a, b);
 				return a - b
 			},
-			x => todo!("{}", x)
+			Operator::Lt => {
+				return if eval_expr(*lhs, locals, args) < eval_expr(*rhs, locals, args) {
+					Literal::Bool(true)
+				} else {
+					Literal::Bool(false)
+				}
+			}
+			x => todo!("{:?}", x)
 		},
 		Expr::Ident(x) => return get_val(x.as_str(), locals, args),
-		x => todo!("{}", x)
+		Expr::FnNamedCall { name, args: _ } => {
+			if name == "clock" {
+				let now = std::time::SystemTime::now();
+				let since_the_epoch = now
+        			.duration_since(std::time::UNIX_EPOCH)
+        			.expect("Time went backwards");
+				let ms = since_the_epoch.as_millis() as i128;
+				return Literal::Int(ms)
+			}
+		},
+		x => todo!("{:?}", x)
 	};
 	Literal::Int(0)
 }
