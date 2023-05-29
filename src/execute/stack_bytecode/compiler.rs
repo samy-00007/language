@@ -82,11 +82,12 @@ fn compile_block(
 	constants_ci: &mut HashMap<String, usize>,
 	ci: &mut usize,
 	scopes: &mut Scopes
-) {
+) -> usize {
+	let mut count = 0;
 	for x in block {
-		match x {
+		count += match x {
 			Stmt::Local { name, t: _, val } => {
-				compile_expr(
+				let n = compile_expr(
 					*val,
 					assembler,
 					constants,
@@ -97,6 +98,7 @@ fn compile_block(
 				let i = scopes.new_var(name);
 				assembler.add_opcode(Opcode::SetLocal);
 				assembler.add_u8(i as u8);
+				n + 2
 				// let i = add_named_const(
 				// 	name.clone(),
 				// 	Literal::String(name),
@@ -115,11 +117,38 @@ fn compile_block(
 					constants_ci,
 					ci,
 					scopes
-				);
+				)
 			}
-			_ => todo!()
+			Stmt::While { cond, block } => {
+				let mut n = compile_expr(
+					cond,
+					assembler,
+					constants,
+					constants_ci,
+					ci,
+					scopes
+				);
+				assembler.add_opcode(Opcode::Jmpn);
+				assembler.add_u8(0);
+				let i = count + n + 1;
+				n += 2;
+				n += compile_block(
+					block,
+					assembler,
+					constants,
+					constants_ci,
+					ci,
+					scopes
+				);
+				assembler.set_u8((count + n + 2) as u8, i);
+				assembler.add_opcode(Opcode::Jmp);
+				assembler.add_u8(count as u8);
+				n + 2
+			}
+			x => todo!("{:?}", x)
 		};
 	}
+	count
 }
 
 fn compile_expr(
@@ -129,29 +158,32 @@ fn compile_expr(
 	constants_ci: &mut HashMap<String, usize>,
 	ci: &mut usize,
 	scopes: &mut Scopes
-) {
+) -> usize {
 	match expr {
 		Expr::Lit(l) => {
 			let i = add_const(l, constants, ci);
 			assembler.add_opcode(Opcode::Const);
 			assembler.add_u8(i as u8);
+			2
 		}
 		Expr::Infix { op, lhs, rhs } => {
 			match op {
-				Operator::Add | Operator::Sub | Operator::Mul | Operator::Div => {
-					compile_expr(*lhs, assembler, constants, constants_ci, ci, scopes);
-					compile_expr(*rhs, assembler, constants, constants_ci, ci, scopes);
+				Operator::Add | Operator::Sub | Operator::Mul | Operator::Div | Operator::Lt => {
+					let mut n = 0;
+					n += compile_expr(*lhs, assembler, constants, constants_ci, ci, scopes);
+					n += compile_expr(*rhs, assembler, constants, constants_ci, ci, scopes);
 					assembler.add_opcode(match op {
 						Operator::Add => Opcode::Add,
 						Operator::Sub => Opcode::Sub,
 						Operator::Mul => Opcode::Mul,
 						Operator::Div => Opcode::Div,
+						Operator::Lt => Opcode::Lt,
 						_ => unreachable!()
 					});
+					n + 1
 				}
 				Operator::Assign => {
-					compile_expr(*rhs, assembler, constants, constants_ci, ci, scopes);
-					// compile_expr(*lhs, bytecode, constants, constants_ci, ci);
+					let n = compile_expr(*rhs, assembler, constants, constants_ci, ci, scopes);
 					match *lhs {
 						Expr::Ident(s) => {
 							let i = scopes.resolve_var(s);
@@ -161,6 +193,7 @@ fn compile_expr(
 							// bytecode.push(Opcode::DefGlob.into());
 							//bytecode.push(Opcode::C)
 							// bytecode.push(i as u8);
+							n + 2
 						}
 						_ => panic!("lhs of assign must be ident")
 					}
@@ -175,22 +208,28 @@ fn compile_expr(
 			let i = scopes.resolve_var(s);
 			assembler.add_opcode(Opcode::GetLocal);
 			assembler.add_u8(i as u8);
+			2
 		}
 		Expr::FnNamedCall { name, args } => {
 			if name == *"print" {
 				let arg = args[0].clone();
-				compile_expr(arg, assembler, constants, constants_ci, ci, scopes);
+				let n = compile_expr(arg, assembler, constants, constants_ci, ci, scopes);
 				assembler.add_opcode(Opcode::Print);
+				n + 1
+			} else if name == *"clock" {
+				assembler.add_opcode(Opcode::Time);
+				1
 			} else {
 				panic!()
 			}
 		}
 		Expr::Block(block) => {
 			scopes.new_scope();
-			compile_block(block, assembler, constants, constants_ci, ci, scopes);
+			let _n = compile_block(block, assembler, constants, constants_ci, ci, scopes);
 			let n = scopes.pop_scope();
 			assembler.add_opcode(Opcode::UnsetLocal);
 			assembler.add_u8(n as u8);
+			_n + 2
 		}
 		_ => todo!()
 	}

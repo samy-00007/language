@@ -27,6 +27,10 @@ impl Assembler {
 		self.0.push(op.into());
 	}
 
+	pub fn set_u8(&mut self, n: u8, i: usize) {
+		self.0[i] = n;
+	}
+
 }
 
 

@@ -71,6 +71,11 @@ impl Vm {
 				Opcode::Sub => op!(self, -),
 				Opcode::Mul => op!(self, *),
 				Opcode::Div => op!(self, /),
+				Opcode::Lt => {
+					let b = self.stack.pop().unwrap();
+					let a = self.stack.pop().unwrap();
+					self.stack.push(Literal::Bool(a < b))
+				}
 				Opcode::Print => println!("{}", self.stack.pop().unwrap()),
 				Opcode::DefGlob => {
 					let constant = self.next_constant();
@@ -109,6 +114,25 @@ impl Vm {
 					let n = self.next_u8();
 					let new_len = self.locals.len().saturating_sub(n as usize);
 					self.locals.truncate(new_len);
+				},
+				Opcode::Time => {
+					let now = std::time::SystemTime::now();
+					let since_the_epoch = now
+						.duration_since(std::time::UNIX_EPOCH)
+						.expect("Time went backwards");
+					let ms = since_the_epoch.as_millis() as i128;
+					self.stack.push(Literal::Int(ms));
+				},
+				Opcode::Jmpn => {
+					let cond = self.stack.pop().unwrap();
+					let add = self.next_u8();
+					if cond == Literal::Bool(false) {
+						self.pc = add as usize;
+					}
+				}
+				Opcode::Jmp => {
+					let add = self.next_u8();
+					self.pc = add as usize;
 				}
 				Opcode::Igl => {
 					eprintln!("Unknown opcode found. Terminating.");

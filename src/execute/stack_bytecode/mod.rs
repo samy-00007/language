@@ -22,6 +22,10 @@ pub enum Opcode {
 	SetLocal,
 	UnsetLocal,
 	GetLocal,
+	Time,
+	Lt,
+	Jmp,
+	Jmpn,
 	Igl // illegal
 }
 
@@ -42,6 +46,10 @@ impl From<u8> for Opcode {
 			10 => Self::SetLocal,
 			11 => Self::UnsetLocal,
 			12 => Self::GetLocal,
+			13 => Self::Time,
+			14 => Self::Lt,
+			15 => Self::Jmp,
+			16 => Self::Jmpn,
 			_ => Self::Igl
 		}
 	}
@@ -63,6 +71,10 @@ impl From<Opcode> for u8 {
 			Opcode::SetLocal => 10,
 			Opcode::UnsetLocal => 11,
 			Opcode::GetLocal => 12,
+			Opcode::Time => 13,
+			Opcode::Lt => 14,
+			Opcode::Jmp => 15,
+			Opcode::Jmpn => 16,
 			Opcode::Igl => 255
 		}
 	}
