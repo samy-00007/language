@@ -39,8 +39,12 @@ where
 		let args = self.parse_fn_args(Token::RParen);
 		self.next(); // Token::RParen
 
-		self.consume(Token::Colon);
-		let t = self.get_ident();
+		let t = if self.at(Token::Arrow) {
+			self.consume(Token::Arrow);
+			Some(self.get_ident())
+		} else {
+			None
+		};
 
 		self.consume(Token::LBrace);
 		let block = self.parse_block();

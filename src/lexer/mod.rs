@@ -137,6 +137,10 @@ pub enum Token {
 	Tilde,
 	#[token("~=")]
 	TildeEq,
+	#[token("->")]
+	Arrow,
+	#[token("=>")]
+	FatArrow,
 	#[regex("//[^\n]*\n", logos::skip)]
 	Comment,
 	#[token("/*", block_comment)]

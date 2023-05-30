@@ -19,7 +19,7 @@ pub enum Stmt {
 	Function {
 		name: String,
 		args: Vec<(String, String)>,
-		t: String,
+		t: Option<String>,
 		block: Block
 	},
 	If {
@@ -318,13 +318,13 @@ impl Display for Stmt {
 				t,
 				block
 			} => format!(
-				"fn {}({}): {} {{\n{}\n}}",
+				"fn {}({}) {} {{\n{}\n}}",
 				name,
 				args.iter()
 					.map(|x| format!("{}: {}", x.0, x.1))
 					.collect::<Vec<String>>()
 					.join("\n"),
-				t,
+				t.as_ref().map_or_else(String::new, |ty| format!("-> {}", ty)),
 				print_s(block, "\n")
 			),
 			Self::While { cond, block } => {
