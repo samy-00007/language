@@ -1,4 +1,4 @@
-use super::ast::{Block, Expr, Literal, ParseError, Stmt, Operator, Prefix, Argument};
+use super::ast::{Argument, Block, Expr, Literal, Operator, ParseError, Prefix, Stmt};
 use super::{Parser, RetItem};
 use crate::lexer::Token;
 
@@ -22,24 +22,20 @@ where
 		match token {
 			Token::Int => {
 				let text = self.text();
-				Expr::Lit(Literal::Int(
-					text.parse()
-						.unwrap_or_else(|_| {
-							self.push_error(ParseError::IntParseError(text)); // FIXME: parse nums with e (e.g 10e2)
-							0
-						})
-				))
+				Expr::Lit(Literal::Int(text.parse().unwrap_or_else(|_| {
+					self.push_error(ParseError::IntParseError(text)); // FIXME: parse nums with e (e.g 10e2)
+					0
+				})))
 			}
 			Token::Float => {
 				let text = self.text();
 				Expr::Lit(Literal::Float(
 					//f128::f128::parse(&text)
-					text.parse()
-						.unwrap_or_else(|_| {
-							self.push_error(ParseError::FloatParseError(text));
-							0.
-						})
-					))
+					text.parse().unwrap_or_else(|_| {
+						self.push_error(ParseError::FloatParseError(text));
+						0.
+					})
+				))
 			}
 			Token::True => Expr::Lit(Literal::Bool(true)),
 			Token::False => Expr::Lit(Literal::Bool(false)),
@@ -81,10 +77,7 @@ where
 			let name = this.get_ident();
 			this.consume(Token::Colon);
 			let ty = this.get_ident();
-			Argument {
-				name,
-				ty
-			}
+			Argument { name, ty }
 		})
 	}
 
@@ -92,14 +85,12 @@ where
 		self.parse_l(end_token, |this| {
 			let arg = this.parse_expression(0);
 			if only_idents && !matches!(arg, Expr::Ident(_)) {
-				this.push_error(ParseError::ExpectedExprButFoundInstead(
-					Expr::Ident(String::new()),
-					arg
-				));
-				Expr::Error
-			} else {
-				arg
+				this.push_error(ParseError::ExpectedExprButFoundInstead {
+					expected: Expr::Ident(String::new()),
+					found: arg.clone()
+				});
 			}
+			arg
 		})
 	}
 
@@ -135,7 +126,10 @@ where
 			} else if Self::is_op(next) {
 				let expr = self.parse_expression(50); // arbitrary, just to only apply the prefix to the next literal
 				let op: Operator = next.into();
-				let op = op.try_into().unwrap_or_else(|e| {self.push_error(e); Prefix::Err});
+				let op = op.try_into().unwrap_or_else(|e| {
+					self.push_error(e);
+					Prefix::Err
+				});
 				Expr::Prefix(op, Box::new(expr))
 			} else {
 				self.push_error(ParseError::UnexpectedToken(next));
@@ -173,67 +167,111 @@ where
 
 #[cfg(test)]
 mod tests {
+	use std::vec;
+
 	use crate::{
 		lexer::Token,
 		parser::{
-			ast::{Expr, Literal, Operator, Stmt, Argument},
+			ast::{Argument, Expr, Literal, Operator, ParseError, Stmt, Prefix},
 			Parser
 		}
 	};
 
 	#[test]
 	fn parse_args() {
-		let mut parser = Parser::new("abcd, efgh, uch65)");
-		let args = parser.parse_list(true, Token::RParen);
-		assert_eq!(
-			args,
-			vec![
-				Expr::Ident("abcd".to_string()),
-				Expr::Ident("efgh".to_string()),
-				Expr::Ident("uch65".to_string())
-			]
-		);
-
-		let mut parser = Parser::new("5, {print(\"test\"); 5}, abcd)");
-		let args = parser.parse_list(false, Token::RParen);
-		assert_eq!(
-			args,
-			vec![
-				Expr::Lit(Literal::Int(5)),
-				Expr::Block(vec![
-					Stmt::Expr(Expr::FnNamedCall {
+		{
+			let mut parser = Parser::new("abcd, efgh, uch65)");
+			let args = parser.parse_list(true, Token::RParen);
+			assert_eq!(
+				args,
+				vec![
+					Expr::Ident("abcd".to_string()),
+					Expr::Ident("efgh".to_string()),
+					Expr::Ident("uch65".to_string())
+				]
+			);
+			assert_eq!(parser.errors().len(), 0);
+		}
+		{
+			let mut parser = Parser::new("abcd, print(\"test\"), uch65)");
+			let args = parser.parse_list(true, Token::RParen);
+			assert_eq!(
+				args,
+				vec![
+					Expr::Ident("abcd".to_string()),
+					Expr::FnNamedCall {
 						name: "print".to_string(),
 						args: vec![Expr::Lit(Literal::String("test".to_string()))]
-					}),
-					Stmt::Return(Expr::Lit(Literal::Int(5)))
-				]),
-				Expr::Ident("abcd".to_string())
-			]
-		);
+					},
+					Expr::Ident("uch65".to_string())
+				]
+			);
 
-		let mut parser = Parser::new("abcd: number, efgh: bool, uch65: string)");
-		let args = parser.parse_fn_args(Token::RParen);
-		assert_eq!(
-			args,
-			vec![
-				Argument { name: "abcd".into(), ty: "number".into() },
-				Argument { name: "efgh".into(), ty: "bool".into() },
-				Argument { name: "uch65".into(), ty: "string".into() },
-			]
-		);
+			let errors = parser.errors();
+			assert_eq!(errors.len(), 1);
+			assert_eq!(
+				errors[0].0,
+				ParseError::ExpectedExprButFoundInstead {
+					expected: Expr::Ident(String::new()),
+					found: Expr::FnNamedCall {
+						name: "print".to_string(),
+						args: vec![Expr::Lit(Literal::String("test".to_string()))]
+					}
+				}
+			);
+		}
+		{
+			let mut parser = Parser::new("5, {print(\"test\"); 5}, abcd)");
+			let args = parser.parse_list(false, Token::RParen);
+			assert_eq!(
+				args,
+				vec![
+					Expr::Lit(Literal::Int(5)),
+					Expr::Block(vec![
+						Stmt::Expr(Expr::FnNamedCall {
+							name: "print".to_string(),
+							args: vec![Expr::Lit(Literal::String("test".to_string()))]
+						}),
+						Stmt::Return(Expr::Lit(Literal::Int(5)))
+					]),
+					Expr::Ident("abcd".to_string())
+				]
+			);
+			assert_eq!(parser.errors().len(), 0);
+		}
+		{
+			let mut parser = Parser::new("abcd: number, efgh: bool, uch65: string)");
+			let args = parser.parse_fn_args(Token::RParen);
+			assert_eq!(
+				args,
+				vec![
+					Argument {
+						name: "abcd".into(),
+						ty: "number".into()
+					},
+					Argument {
+						name: "efgh".into(),
+						ty: "bool".into()
+					},
+					Argument {
+						name: "uch65".into(),
+						ty: "string".into()
+					},
+				]
+			);
+			assert_eq!(parser.errors().len(), 0);
+		}
 	}
 
 	#[test]
 	fn parse_float() {
 		let mut parser = Parser::new("3.5 4.7 7.2");
-		loop {
+		for _ in 0..3 {
 			let x = parser.parse_expression(0);
-			if x == Expr::Error { // FIXME:
-				break
-			}
 			// can't compare them precisely because they're floats
 			assert!(matches!(x, Expr::Lit(Literal::Float(_))));
 		}
+		assert_eq!(parser.errors().len(), 0);
 	}
 
 	#[test]
@@ -246,15 +284,12 @@ mod tests {
 			Expr::Lit(Literal::Bool(false)),
 		];
 		let mut parsed = Vec::new();
-		loop {
-			let x = parser.parse_expression(0);
-			if x == Expr::Error {
-				break
-			}
-			parsed.push(x);
+		for _ in 0..expected.len() {
+			parsed.push(parser.parse_expression(0));
 		}
 
 		assert_eq!(parsed, expected);
+		assert_eq!(parser.errors().len(), 0);
 	}
 
 	#[test]
@@ -269,15 +304,12 @@ mod tests {
 			Expr::Ident("test".to_string()),
 		];
 		let mut parsed = Vec::new();
-		loop {
-			let x = parser.parse_expression(0);
-			if x == Expr::Error {
-				break
-			}
-			parsed.push(x);
+		for _ in 0..expected.len() {
+			parsed.push(parser.parse_expression(0));
 		}
 
 		assert_eq!(parsed, expected);
+		assert_eq!(parser.errors().len(), 0);
 	}
 
 	#[test]
@@ -311,6 +343,7 @@ mod tests {
 			let res = parser.parse_block();
 
 			assert_eq!(res, expected);
+			assert_eq!(parser.errors().len(), 0);
 		}
 	}
 
@@ -392,19 +425,33 @@ mod tests {
 					rhs: n4.clone()
 				}),
 				rhs: n4
-			},
+			}
 		];
 		let mut parsed = Vec::new();
-		loop {
-			let x = parser.parse_expression(0);
-			match x {
-				Expr::Error => break, // FIXME:
-				_ => parsed.push(x)
-			}
+		for _ in 0..expected.len() {
+			parsed.push(parser.parse_expression(0));
 		}
 
 		assert_eq!(parsed, expected);
+		assert_eq!(parser.errors().len(), 0);
 	}
+
+	#[test]
+	fn parse_prefix() {
+		let mut parser = Parser::new("(+4); (-5);");
+
+		let expected = vec![
+			Stmt::Expr(Expr::Prefix(Prefix::Plus, Expr::Lit(Literal::Int(4)).into())),
+			Stmt::Expr(Expr::Prefix(Prefix::Minus, Expr::Lit(Literal::Int(5)).into()))
+		];
+
+		for x in expected {
+			assert_eq!(parser.parse_statement(), x);
+		}
+
+		assert_eq!(parser.errors().len(), 0);
+	}
+	
 
 	#[test]
 	fn parse_priority() {
@@ -415,17 +462,14 @@ mod tests {
 			"(((7 * 7) * 7) + 3)",
 			"(((6 / 7) - (2 * 8)) - 2)",
 			"((a & b) & c)",
-			"((a && b) && c)"
+			"((a && b) && c)",
 		];
 		let mut parsed = Vec::new();
-		loop {
-			let x = parser.parse_expression(0);
-			if x == Expr::Error {
-				break
-			}
-			parsed.push(x.to_string());
+		for _ in 0..expected.len() {
+			parsed.push(parser.parse_expression(0).to_string());
 		}
 
 		assert_eq!(parsed, expected);
+		assert_eq!(parser.errors().len(), 0);
 	}
 }

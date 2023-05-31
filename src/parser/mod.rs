@@ -93,7 +93,7 @@ where
 				if token == expected {
 					self.next();
 				} else {
-					self.errors.push((ParseError::ExpectedTokenButFoundInstead(expected, token), range));
+					self.errors.push((ParseError::ExpectedTokenButFoundInstead {expected, found: token }, range));
 					if consume_if_error {
 						self.next();
 					}
@@ -158,10 +158,10 @@ where
 			self.next();
 			self.text()
 		} else {
-			self.push_error(ParseError::ExpectedTokenButFoundInstead(
-				Token::Identifier,
-				ident
-			));
+			self.push_error(ParseError::ExpectedTokenButFoundInstead {
+				expected: Token::Identifier,
+				found: ident
+		});
 			String::new() // TODO: error message in string ?
 		}
 	}
@@ -237,6 +237,10 @@ where
 	}
 
 	//
+
+	pub fn errors(&self) -> &Vec<(ParseError, Range<usize>)> {
+		&self.errors
+	}
 
 	pub fn parse(&mut self) -> (Block, &Vec<(ParseError, Range<usize>)>) {
 		(self.parse_block(), &self.errors)

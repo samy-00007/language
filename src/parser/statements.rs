@@ -15,7 +15,7 @@ where
 				Some(self.text())
 			} else {
 				let peek = self.peek().unwrap();
-				self.push_error(ParseError::ExpectedTokenButFoundInstead(Token::Identifier, peek));
+				self.push_error(ParseError::ExpectedTokenButFoundInstead { expected: Token::Identifier, found: peek});
 				None
 			}
 		} else {

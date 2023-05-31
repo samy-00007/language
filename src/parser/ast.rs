@@ -114,10 +114,9 @@ pub enum Operator {
 pub enum ParseError {
 	UnexpectedEOF,
 	UnexpectedToken(Token), // TODO: maybe store the token text ?
-	/// (expected, found)
-	ExpectedTokenButFoundInstead(Token, Token),
+	ExpectedTokenButFoundInstead { expected: Token, found: Token},
 	ExpectedTokenButNotFound(Token),
-	ExpectedExprButFoundInstead(Expr, Expr),
+	ExpectedExprButFoundInstead { expected: Expr, found: Expr },
 	ExpectedExprButNotFound(Expr),
 	IntParseError(String),
 	FloatParseError(String)
@@ -268,11 +267,11 @@ impl Display for ParseError {
 		let res = match self {
 			Self::UnexpectedEOF => "Expected expression but found <EOF>".to_string(),
 			Self::UnexpectedToken(t) => format!("Unexpected token '{t:?}' found"),
-			Self::ExpectedTokenButFoundInstead(a, b) => {
+			Self::ExpectedTokenButFoundInstead{expected: a, found: b} => {
 				format!("Expected token '{a:?}' but found '{b:?}' instead")
 			}
 			Self::ExpectedTokenButNotFound(t) => format!("Expected token '{t:?}'"),
-			Self::ExpectedExprButFoundInstead(a, b) => {
+			Self::ExpectedExprButFoundInstead{expected: a, found: b} => {
 				format!("Expected expression '{a:?}' but found '{b:?}' instead")
 			}
 			Self::ExpectedExprButNotFound(t) => format!("Expected expression '{t:?}'"),
