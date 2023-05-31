@@ -108,6 +108,99 @@ pub enum Operator {
 	OrEq
 }
 
+#[derive(Debug, PartialEq, Clone)]
+#[allow(dead_code)]
+pub enum ParseError {
+	UnexpectedEOF,
+	UnexpectedToken(Token), // TODO: maybe store the token text ?
+	/// (expected, found)
+	ExpectedTokenButFoundInstead(Token, Token),
+	ExpectedTokenButNotFound(Token),
+	ExpectedExprButFoundInstead(Expr, Expr),
+	ExpectedExprButNotFound(Expr),
+	IntParseError(String),
+	FloatParseError(String)
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Generic {
+	pub name: String,
+	pub traits: Vec<String>
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Argument {
+	pub name: String,
+	pub ty: String
+}
+
+//
+
+impl Display for Stmt {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		let res = match self {
+			Self::Expr(x) => format!("{x};"),
+			Self::FnReturn(x) => format!("return {x}"),
+			Self::If { cond, block } => format!("if ({}) {{\n{}\n}}", cond, print_s(block, "\n")),
+			Self::Local { name, t, val } => {
+				let t_ = t.as_ref().map_or_else(String::new, |t| format!(": {}", t));
+				format!("let {name}{t_} = {val};")
+			}
+			Self::Return(x) => format!("{x}"),
+			Self::Function {
+				name,
+				generics,
+				args,
+				t,
+				block
+			} => format!(
+				"fn {}{}({}) {} {{\n{}\n}}",
+				name,
+				print_l(generics, ", ", "<", ">"),
+				args.iter()
+					.map(|x| format!("{}: {}", x.name, x.ty))
+					.collect::<Vec<String>>()
+					.join("\n"),
+				t.as_ref().map_or_else(String::new, |ty| format!("-> {}", ty)),
+				print_s(block, "\n")
+			),
+			Self::While { cond, block } => {
+				format!("while ({}) {{\n{}\n}}", cond, print_s(block, "\n"))
+			}
+			Self::Error => "<STMT ERROR>".to_string()
+		};
+		write!(f, "{res}")
+	}
+}
+
+impl Display for Expr {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		let res = match self {
+			Self::Block(x) => format!("{{\n{}\n}}", print_s(x, "\n")),
+			Self::FnNamedCall { name, args } => format!("{name}({})", print_s(args, ", ")),
+			Self::Ident(s) => s.to_string(),
+			Self::Lit(l) => format!("{l}"),
+			Self::Infix { op, lhs, rhs } => format!("({lhs} {op} {rhs})"),
+			Self::Prefix(prefix, e) => format!("({prefix}{e})"),
+			Self::FnCall { expr, args } => format!("{}({})", expr, print_s(args, ", ")),
+			Self::Error => "<EXPR ERROR>".to_string()
+		};
+		write!(f, "{res}")
+	}
+}
+
+impl Display for Literal {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		let res = match self {
+			Self::Bool(x) => x.to_string(),
+			Self::Float(x) => x.to_string(),
+			Self::Int(x) => x.to_string(),
+			Self::String(x) => format!("\"{x}\"")
+		};
+		write!(f, "{res}")
+	}
+}
+
 impl Display for Prefix {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		let res = match self {
@@ -120,6 +213,88 @@ impl Display for Prefix {
 		write!(f, "{res}")
 	}
 }
+
+impl Display for Operator {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		let res = match self {
+			Self::Assign => "=",
+
+			Self::Add => "+",
+			Self::AddEq => "+=",
+			Self::Sub => "-",
+			Self::SubEq => "-=",
+			Self::Mul => "*",
+			Self::MulEq => "*=",
+			Self::Exponent => "**",
+			Self::ExponentEq => "**=",
+			Self::Div => "/",
+			Self::DivEq => "/=",
+			Self::Rem => "%",
+			Self::RemEq => "%=",
+			Self::Not => "!",
+
+			Self::BitAnd => "&",
+			Self::BitAndEq => "&=",
+			Self::BitOr => "|",
+			Self::BitOrEq => "|=",
+			Self::BitNot => "~",
+			Self::BitNotEq => "~=",
+			Self::BitXor => "^",
+			Self::BitXorEq => "^=",
+			Self::LShift => "<<",
+			Self::LShiftEq => "<<=",
+			Self::RShift => ">>",
+			Self::RShiftEq => ">>=",
+
+			Self::Eq => "==",
+			Self::Gt => ">",
+			Self::Gte => ">=",
+			Self::Lt => "<",
+			Self::Lte => "<=",
+			Self::Neq => "!=",
+			Self::And => "&&",
+			Self::AndEq => "&&=",
+			Self::Or => "||",
+			Self::OrEq => "||="
+		};
+
+		write!(f, "{res}")
+	}
+}
+
+impl Display for ParseError {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		let res = match self {
+			Self::UnexpectedEOF => "Expected expression but found <EOF>".to_string(),
+			Self::UnexpectedToken(t) => format!("Unexpected token '{t:?}' found"),
+			Self::ExpectedTokenButFoundInstead(a, b) => {
+				format!("Expected token '{a:?}' but found '{b:?}' instead")
+			}
+			Self::ExpectedTokenButNotFound(t) => format!("Expected token '{t:?}'"),
+			Self::ExpectedExprButFoundInstead(a, b) => {
+				format!("Expected expression '{a:?}' but found '{b:?}' instead")
+			}
+			Self::ExpectedExprButNotFound(t) => format!("Expected expression '{t:?}'"),
+			Self::IntParseError(s) => format!("Could not parse '{s}' into an int"),
+			Self::FloatParseError(s) => format!("Could not parse '{s}' into an float")
+		};
+		write!(f, "{res}")
+	}
+}
+
+impl Display for Generic {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		let traits = self.traits.join(" + ");
+		let traits = if traits.is_empty() {
+			traits
+		} else {
+			": ".to_string() + traits.as_str()
+		};
+		write!(f, "{}{}", self.name, traits)
+	}
+}
+
+//
 
 impl TryFrom<Operator> for Prefix {
 	type Error = ParseError;
@@ -227,157 +402,19 @@ impl From<Operator> for Token {
 	}
 }
 
-#[derive(Debug, PartialEq, Clone)]
-#[allow(dead_code)]
-pub enum ParseError {
-	UnexpectedEOF,
-	UnexpectedToken(Token), // TODO: maybe store the token text ?
-	/// (expected, found)
-	ExpectedTokenButFoundInstead(Token, Token),
-	ExpectedTokenButNotFound(Token),
-	ExpectedExprButFoundInstead(Expr, Expr),
-	ExpectedExprButNotFound(Expr),
-	IntParseError(String),
-	FloatParseError(String)
-}
 
-impl Display for Literal {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		let res = match self {
-			Self::Bool(x) => x.to_string(),
-			Self::Float(x) => x.to_string(),
-			Self::Int(x) => x.to_string(),
-			Self::String(x) => format!("\"{x}\"")
-		};
-		write!(f, "{res}")
+fn print_l<T: Display>(vec: &[T], sep: &str, surround_l: &str, surround_r: &str) -> String {
+	let s = print_s(vec, sep);
+	if s.is_empty() {
+		s
+	} else {
+		format!("{surround_l}{s}{surround_r}")
 	}
 }
 
-impl Display for Operator {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		let res = match self {
-			Self::Assign => "=",
-
-			Self::Add => "+",
-			Self::AddEq => "+=",
-			Self::Sub => "-",
-			Self::SubEq => "-=",
-			Self::Mul => "*",
-			Self::MulEq => "*=",
-			Self::Exponent => "**",
-			Self::ExponentEq => "**=",
-			Self::Div => "/",
-			Self::DivEq => "/=",
-			Self::Rem => "%",
-			Self::RemEq => "%=",
-			Self::Not => "!",
-
-			Self::BitAnd => "&",
-			Self::BitAndEq => "&=",
-			Self::BitOr => "|",
-			Self::BitOrEq => "|=",
-			Self::BitNot => "~",
-			Self::BitNotEq => "~=",
-			Self::BitXor => "^",
-			Self::BitXorEq => "^=",
-			Self::LShift => "<<",
-			Self::LShiftEq => "<<=",
-			Self::RShift => ">>",
-			Self::RShiftEq => ">>=",
-
-			Self::Eq => "==",
-			Self::Gt => ">",
-			Self::Gte => ">=",
-			Self::Lt => "<",
-			Self::Lte => "<=",
-			Self::Neq => "!=",
-			Self::And => "&&",
-			Self::AndEq => "&&=",
-			Self::Or => "||",
-			Self::OrEq => "||="
-		};
-
-		write!(f, "{res}")
-	}
-}
-
-impl Display for Stmt {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		let res = match self {
-			Self::Expr(x) => format!("{x};"),
-			Self::FnReturn(x) => format!("return {x}"),
-			Self::If { cond, block } => format!("if ({}) {{\n{}\n}}", cond, print_s(block, "\n")),
-			Self::Local { name, t, val } => {
-				let t_ = t.as_ref().map_or_else(String::new, |t| format!(": {}", t));
-				format!("let {name}{t_} = {val};")
-			}
-			Self::Return(x) => format!("{x}"),
-			Self::Function {
-				name,
-				args,
-				t,
-				block
-			} => format!(
-				"fn {}({}) {} {{\n{}\n}}",
-				name,
-				args.iter()
-					.map(|x| format!("{}: {}", x.0, x.1))
-					.collect::<Vec<String>>()
-					.join("\n"),
-				t.as_ref().map_or_else(String::new, |ty| format!("-> {}", ty)),
-				print_s(block, "\n")
-			),
-			Self::While { cond, block } => {
-				format!("while ({}) {{\n{}\n}}", cond, print_s(block, "\n"))
-			}
-			Self::Error => "<STMT ERROR>".to_string()
-		};
-		write!(f, "{res}")
-	}
-}
-
-fn print_s<T>(vec: &[T], sep: &str) -> String
-where
-	T: Display
-{
+fn print_s<T: Display>(vec: &[T], sep: &str) -> String {
 	vec.iter()
 		.map(std::string::ToString::to_string)
 		.collect::<Vec<String>>()
 		.join(sep)
-}
-
-impl Display for Expr {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		let res = match self {
-			Self::Block(x) => format!("{{\n{}\n}}", print_s(x, "\n")),
-			Self::FnNamedCall { name, args } => format!("{name}({})", print_s(args, ", ")),
-			Self::Ident(s) => s.to_string(),
-			Self::Lit(l) => format!("{l}"),
-			Self::Infix { op, lhs, rhs } => format!("({lhs} {op} {rhs})"),
-			Self::Prefix(prefix, e) => format!("({prefix}{e})"),
-			Self::FnCall { expr, args } => format!("{}({})", expr, print_s(args, ", ")),
-			Self::Error => "<EXPR ERROR>".to_string()
-		};
-		write!(f, "{res}")
-	}
-}
-
-impl Display for ParseError {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		let res = match self {
-			Self::UnexpectedEOF => "Expected expression but found <EOF>".to_string(),
-			Self::UnexpectedToken(t) => format!("Unexpected token '{t:?}' found"),
-			Self::ExpectedTokenButFoundInstead(a, b) => {
-				format!("Expected token '{a:?}' but found '{b:?}' instead")
-			}
-			Self::ExpectedTokenButNotFound(t) => format!("Expected token '{t:?}'"),
-			Self::ExpectedExprButFoundInstead(a, b) => {
-				format!("Expected expression '{a:?}' but found '{b:?}' instead")
-			}
-			Self::ExpectedExprButNotFound(t) => format!("Expected expression '{t:?}'"),
-			Self::IntParseError(s) => format!("Could not parse '{s}' into an int"),
-			Self::FloatParseError(s) => format!("Could not parse '{s}' into an float")
-		};
-		write!(f, "{res}")
-	}
 }
