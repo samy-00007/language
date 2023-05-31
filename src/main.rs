@@ -21,13 +21,19 @@ print(i);";
 
 
 fn main() {
-	println!("ast walk: ");
+	let code = "fn abcd<T: Display>(a: T) -> number {}";
+
+	let mut parser = Parser::new(code);
+	let parsed = parser.parse();
+	println!("{parsed:?}");
+
+	/*println!("ast walk: ");
 	ast_walk(false);
 	println!();
 	println!("===================");
 	println!();
 	println!("stack-based bytecode vm: ");
-	stack_bytecode(false);
+	stack_bytecode(false);*/
 }
 
 

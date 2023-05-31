@@ -1,4 +1,4 @@
-use super::ast::{ParseError, Stmt, Expr};
+use super::ast::{ParseError, Stmt, Expr, Generic};
 use super::{Parser, RetItem};
 use crate::lexer::Token;
 
@@ -34,8 +34,17 @@ where
 
 	fn parse_fn_stmt(&mut self) -> Stmt {
 		let name = self.get_ident();
+		
+		let generics = if self.at(Token::LChevron) {
+			self.next();
+			let g = self.parse_generics();
+			self.consume(Token::RChevron);
+			g
+		} else {
+			Vec::new()
+		};
+		
 		self.consume(Token::LParen);
-
 		let args = self.parse_fn_args(Token::RParen);
 		self.next(); // Token::RParen
 
@@ -53,9 +62,30 @@ where
 		Stmt::Function {
 			name,
 			args,
+			generics,
 			t,
 			block
 		}
+	}
+
+	fn parse_generics(&mut self) -> Vec<Generic> {
+		self.parse_l(Token::RChevron, |this| {
+			let name = this.get_ident();
+			let mut traits = Vec::new();
+			if this.at(Token::Colon) {
+				this.next();
+
+				traits.push(this.get_ident());
+				while this.at(Token::Plus) {
+					this.next();
+					traits.push(this.get_ident());
+				}
+			}
+			Generic {
+				name,
+				traits
+			}
+		})
 	}
 
 	fn parse_expr(&mut self) -> Stmt {

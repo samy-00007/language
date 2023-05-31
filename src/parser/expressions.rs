@@ -1,4 +1,4 @@
-use super::ast::{Block, Expr, Literal, ParseError, Stmt, Operator, Prefix};
+use super::ast::{Block, Expr, Literal, ParseError, Stmt, Operator, Prefix, Argument};
 use super::{Parser, RetItem};
 use crate::lexer::Token;
 
@@ -76,76 +76,31 @@ where
 	///
 	/// ```
 	// FIXME: parse something else than ident, like `object.property`
-	pub(super) fn parse_fn_args(&mut self, end_token: Token) -> Vec<(String, String)> {
-		let mut args = Vec::new();
-		loop {
-			let peek = self.peek();
-			match peek {
-				None => {
-					self.push_error(ParseError::UnexpectedEOF);
-					break;
-				},
-				Some(x) => {
-					if x == end_token || x == Token::SemiColon {
-						break
-					}
-				}
+	pub(super) fn parse_fn_args(&mut self, end_token: Token) -> Vec<Argument> {
+		self.parse_l(end_token, |this| {
+			let name = this.get_ident();
+			this.consume(Token::Colon);
+			let ty = this.get_ident();
+			Argument {
+				name,
+				ty
 			}
-	
-			let arg = self.get_ident();
-			self.consume(Token::Colon);
-			let t = self.get_ident();
-			args.push((arg, t));
-			if !self.at(end_token) {
-				self.consume(Token::Comma);
-			} else if self.at(Token::Comma) { // trailing comma
-				self.next();
-			}
-			if self.is_eof() {
-				self.push_error(ParseError::UnexpectedEOF);
-				break;
-			}
-		}
-		args
+		})
 	}
 
 	pub(super) fn parse_list(&mut self, only_idents: bool, end_token: Token) -> Vec<Expr> {
-		let mut args = Vec::new();
-		loop {
-			let peek = self.peek();
-			match peek {
-				None => {
-					self.push_error(ParseError::UnexpectedEOF);
-					break;
-				},
-				Some(x) => {
-					if x == end_token || x == Token::SemiColon {
-						break
-					}
-				}
-			}
-
-			let arg = self.parse_expression(0);
+		self.parse_l(end_token, |this| {
+			let arg = this.parse_expression(0);
 			if only_idents && !matches!(arg, Expr::Ident(_)) {
-				self.push_error(ParseError::ExpectedExprButFoundInstead(
+				this.push_error(ParseError::ExpectedExprButFoundInstead(
 					Expr::Ident(String::new()),
 					arg
 				));
-				args.push(Expr::Error);
+				Expr::Error
 			} else {
-				args.push(arg);
+				arg
 			}
-			if !self.at(end_token) {
-				self.consume(Token::Comma);
-			} else if self.at(Token::Comma) { // trailing comma
-				self.next();
-			}
-			if self.is_eof() {
-				self.push_error(ParseError::UnexpectedEOF);
-				break;
-			}
-		}
-		args
+		})
 	}
 
 	pub fn parse_fn_call(&mut self, lhs: Expr) -> Expr {
@@ -221,7 +176,7 @@ mod tests {
 	use crate::{
 		lexer::Token,
 		parser::{
-			ast::{Expr, Literal, Operator, Stmt},
+			ast::{Expr, Literal, Operator, Stmt, Argument},
 			Parser
 		}
 	};
@@ -261,9 +216,9 @@ mod tests {
 		assert_eq!(
 			args,
 			vec![
-				("abcd".to_string(), "number".to_string()),
-				("efgh".to_string(), "bool".to_string()),
-				("uch65".to_string(), "string".to_string())
+				Argument { name: "abcd".into(), ty: "number".into() },
+				Argument { name: "efgh".into(), ty: "bool".into() },
+				Argument { name: "uch65".into(), ty: "string".into() },
 			]
 		);
 	}

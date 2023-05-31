@@ -18,7 +18,8 @@ pub enum Stmt {
 	},
 	Function {
 		name: String,
-		args: Vec<(String, String)>,
+		generics: Vec<Generic>,
+		args: Vec<Argument>,
 		t: Option<String>,
 		block: Block
 	},

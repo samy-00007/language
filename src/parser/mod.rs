@@ -206,6 +206,36 @@ where
 		self.errors.push((error, range));
 	}
 
+	pub(self) fn parse_l<T, F: Fn(&mut Parser<'a, I>) -> T>(&mut self, end_token: Token, f: F) -> Vec<T>{
+		let mut args = Vec::new();
+		loop {
+			match self.peek() {
+				None => {
+					self.push_error(ParseError::UnexpectedEOF);
+					break;
+				},
+				Some(x) => {
+					if x == end_token || x == Token::SemiColon {
+						break
+					}
+				}
+			}
+
+			args.push(f(self));
+
+			if !self.at(end_token) {
+				self.consume(Token::Comma);
+			} else if self.at(Token::Comma) { // trailing comma
+				self.next();
+			}
+			if self.is_eof() {
+				self.push_error(ParseError::UnexpectedEOF);
+				break;
+			}
+		}
+		args
+	}
+
 	//
 
 	pub fn parse(&mut self) -> (Block, &Vec<(ParseError, Range<usize>)>) {
