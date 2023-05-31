@@ -64,6 +64,15 @@ where
 		}
 	}
 
+	pub(self) fn peek_ignore(&mut self, ignore: Token) -> Option<Token> {
+		let mut peek = self.peek();
+		while peek == Some(ignore) {
+			self.next();
+			peek = self.peek();
+		}
+		peek
+	}
+
 	fn peek_range(&mut self) -> Option<(Token, Range<usize>)> {
 		Parser::<'a, I>::unwrap_ref(self.tokens.peek())
 	}
@@ -241,12 +250,20 @@ where
 
 	//
 
-	pub fn errors(&self) -> &Vec<(ParseError, Range<usize>)> {
+	#[cfg(test)]
+	pub const fn errors(&self) -> &Vec<(ParseError, Range<usize>)> {
 		&self.errors
 	}
 
 	pub fn parse(&mut self) -> (Block, &Vec<(ParseError, Range<usize>)>) {
-		(self.parse_block(), &self.errors)
+		let parsed = self.parse_block();
+
+		#[cfg(test)]
+		if !self.errors.is_empty() {
+			eprintln!("\n\nparse errors: {:?}\n\n", &self.errors);
+		}
+
+		(parsed, &self.errors)
 	}
 }
 

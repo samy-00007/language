@@ -50,7 +50,7 @@ where
 
 	pub(super) fn parse_block(&mut self) -> Block {
 		let mut stmts = Vec::new();
-		while !matches!(self.peek(), Some(Token::RBrace) | None) {
+		while !matches!(self.peek_ignore(Token::SemiColon), Some(Token::RBrace) | None) {
 			let stmt = self.parse_statement();
 
 			if matches!(stmt, Stmt::Return(_)) {

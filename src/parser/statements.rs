@@ -128,9 +128,6 @@ where
 	}
 
 	pub fn parse_statement(&mut self) -> Stmt {
-		while self.at(Token::SemiColon) {
-			self.next(); // a bit janky
-		}
 		let Some(peek) = self.peek() else {
 			self.push_error(ParseError::UnexpectedEOF);
 			return Stmt::Error
@@ -149,5 +146,148 @@ where
 		} else {
 			self.parse_expr()
 		}
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use crate::parser::{
+		ast::{Argument, Expr, Generic, Literal, Operator, Stmt},
+		Parser
+	};
+
+	#[test]
+	fn parse_let() {
+		let mut parser = Parser::new("let abcd: number = 10;");
+		let expected = vec![Stmt::Local {
+			name: "abcd".into(),
+			t: Some("number".into()),
+			val: Expr::Lit(Literal::Int(10)).into()
+		}];
+
+		let parsed = parser.parse();
+
+		assert_eq!(parsed.0, expected);
+		assert_eq!(parsed.1.len(), 0);
+	}
+
+	#[test]
+	fn parse_fn() {
+		let mut parser = Parser::new(
+			"
+		fn abcd() -> number {
+			5
+		}
+
+		fn efgh<T: Display>(a: T) {
+			print(a)
+		}
+
+		fn square(b: number) -> number {
+			b * b
+		}
+		"
+		);
+
+		let expected = vec![
+			Stmt::Function {
+				name: "abcd".into(),
+				generics: vec![],
+				args: vec![],
+				t: Some("number".into()),
+				block: vec![Stmt::Return(Expr::Lit(Literal::Int(5)))]
+			},
+			Stmt::Function {
+				name: "efgh".into(),
+				generics: vec![Generic {
+					name: "T".into(),
+					traits: vec!["Display".into()]
+				}],
+				args: vec![Argument {
+					name: "a".into(),
+					ty: "T".into()
+				}],
+				t: None,
+				block: vec![Stmt::Return(Expr::FnNamedCall {
+					name: "print".into(),
+					args: vec![Expr::Ident("a".into())]
+				})]
+			},
+			Stmt::Function {
+				name: "square".into(),
+				generics: vec![],
+				args: vec![Argument {
+					name: "b".into(),
+					ty: "number".into()
+				}],
+				t: Some("number".into()),
+				block: vec![Stmt::Return(Expr::Infix {
+					op: Operator::Mul,
+					lhs: Expr::Ident("b".into()).into(),
+					rhs: Expr::Ident("b".into()).into()
+				})]
+			},
+		];
+
+		let parsed = parser.parse();
+
+		assert_eq!(parsed.0, expected);
+		assert_eq!(parsed.1.len(), 0);
+	}
+
+	#[test]
+	fn parse_return() {
+		let mut parser = Parser::new("return abcd;");
+
+		let expected = vec![Stmt::FnReturn(Expr::Ident("abcd".into()))];
+
+		let parsed = parser.parse();
+
+		assert_eq!(parsed.0, expected);
+		assert_eq!(parsed.1.len(), 0);
+	}
+
+	// no test for while because it is litteraly the same code as for "if"
+	#[test]
+	fn parse_if() {
+		let mut parser = Parser::new("if (a > 1) { print(a); }");
+
+		let expected = vec![Stmt::If {
+			cond: Expr::Infix {
+				op: Operator::Gt,
+				lhs: Expr::Ident("a".into()).into(),
+				rhs: Expr::Lit(Literal::Int(1)).into()
+			},
+			block: vec![Stmt::Expr(Expr::FnNamedCall {
+				name: "print".into(),
+				args: vec![Expr::Ident("a".into())]
+			})]
+		}];
+
+		let parsed = parser.parse();
+
+		assert_eq!(parsed.0, expected);
+		assert_eq!(parsed.1.len(), 0);
+	}
+
+	#[test]
+	fn parse_cond_block() {
+		let mut parser = Parser::new("(a <= 1) { print(a); }");
+
+		let cond_expected = Expr::Infix {
+			op: Operator::Lte,
+			lhs: Expr::Ident("a".into()).into(),
+			rhs: Expr::Lit(Literal::Int(1)).into()
+		};
+		let block_expected = vec![Stmt::Expr(Expr::FnNamedCall {
+				name: "print".into(),
+				args: vec![Expr::Ident("a".into())]
+		})];
+
+		let parsed = parser.parse_cond_block();
+
+		assert_eq!(parsed.0, cond_expected);
+		assert_eq!(parsed.1, block_expected);
+		assert_eq!(parser.errors().len(), 0);
 	}
 }
