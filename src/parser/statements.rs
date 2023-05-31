@@ -1,4 +1,4 @@
-use super::ast::{ParseError, Stmt, Expr, Generic};
+use super::ast::{Expr, Generic, ParseError, Stmt};
 use super::{Parser, RetItem};
 use crate::lexer::Token;
 
@@ -11,16 +11,19 @@ where
 
 		let t = if self.at(Token::Colon) {
 			self.next();
-			if self.at(Token::Identifier) {
-				Some(self.text())
-			} else {
-				let peek = self.peek().unwrap();
-				self.push_error(ParseError::ExpectedTokenButFoundInstead { expected: Token::Identifier, found: peek});
+			let s = self.get_ident();
+			if s.is_empty() {
 				None
+			} else {
+				Some(s)
 			}
 		} else {
 			None
 		};
+
+		if t.is_none() && !self.allow_implicit_types {
+			self.push_error(ParseError::NoImplicitTypeAllowed);
+		}
 
 		self.consume_raw(Token::Eq, true); // TODO: variable without initial value
 		let expr = self.parse_expression(0);
@@ -34,7 +37,7 @@ where
 
 	fn parse_fn_stmt(&mut self) -> Stmt {
 		let name = self.get_ident();
-		
+
 		let generics = if self.at(Token::LChevron) {
 			self.next();
 			let g = self.parse_generics();
@@ -43,7 +46,7 @@ where
 		} else {
 			Vec::new()
 		};
-		
+
 		self.consume(Token::LParen);
 		let args = self.parse_fn_args(Token::RParen);
 		self.next(); // Token::RParen
@@ -81,10 +84,7 @@ where
 					traits.push(this.get_ident());
 				}
 			}
-			Generic {
-				name,
-				traits
-			}
+			Generic { name, traits }
 		})
 	}
 

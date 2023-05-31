@@ -19,17 +19,20 @@ where
 	source: &'a str,
 	range: Range<usize>,
 	// phase: ,
-	errors: Vec<(ParseError, Range<usize>)>
+	errors: Vec<(ParseError, Range<usize>)>,
+	allow_implicit_types: bool
+	// TODO: fn should_skip_token
 }
 
 impl<'a> Parser<'a, SpannedIter<'a, Token>> {
-	pub fn new(source: &'a str) -> Parser<'a, SpannedIter<'a, Token>> {
+	pub fn new(source: &'a str/*, allow_implicit_types: bool*/) -> Parser<'a, SpannedIter<'a, Token>> {
 		let lex = Token::lexer(source);
 		Self {
 			tokens: lex.spanned().peekable(),
 			source,
 			range: 0..0,
-			errors: Vec::new()
+			errors: Vec::new(),
+			allow_implicit_types: false
 		}
 	}
 }

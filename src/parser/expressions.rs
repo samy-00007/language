@@ -71,7 +71,6 @@ where
 	/// ident1: type1, ident2: type2, ident3: type3
 	///
 	/// ```
-	// FIXME: parse something else than ident, like `object.property`
 	pub(super) fn parse_fn_args(&mut self, end_token: Token) -> Vec<Argument> {
 		self.parse_l(end_token, |this| {
 			let name = this.get_ident();

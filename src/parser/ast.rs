@@ -119,7 +119,8 @@ pub enum ParseError {
 	ExpectedExprButFoundInstead { expected: Expr, found: Expr },
 	ExpectedExprButNotFound(Expr),
 	IntParseError(String),
-	FloatParseError(String)
+	FloatParseError(String),
+	NoImplicitTypeAllowed
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -276,7 +277,8 @@ impl Display for ParseError {
 			}
 			Self::ExpectedExprButNotFound(t) => format!("Expected expression '{t:?}'"),
 			Self::IntParseError(s) => format!("Could not parse '{s}' into an int"),
-			Self::FloatParseError(s) => format!("Could not parse '{s}' into an float")
+			Self::FloatParseError(s) => format!("Could not parse '{s}' into an float"),
+			Self::NoImplicitTypeAllowed => "Implicit type is not allowed, please explicit the type".into()
 		};
 		write!(f, "{res}")
 	}
