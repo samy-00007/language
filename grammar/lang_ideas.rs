@@ -8,8 +8,9 @@ for () {
 
 while () {
 
-} ( finally {} )
+} // ( finally {} )
 
+use module::abcd;
 
 mod module {
 
@@ -29,8 +30,8 @@ buildtime {
 
 }
 
-Result<Vec<T>, Option<Vec<E>>>
-T[]!E[]?
+// Result<Vec<T>, Option<Vec<E>>>
+// T[]!E[]?
 
 
 
