@@ -1,0 +1,21 @@
+fn abcd(arg1: number) -> number {
+
+for () {
+
+}
+
+while () {
+
+}
+
+
+	arg1 + 2
+}
+
+const abcd = 10;
+
+
+struct abcd {
+	a: number,
+	b: number
+}
