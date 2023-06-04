@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 
-use std::collections::HashMap;
-use crate::parser::ast::Literal;
 use super::Opcode;
+use crate::parser::ast::Literal;
+use std::collections::HashMap;
 
 macro_rules! op {
 	($self:ident, $op:tt) => {
@@ -101,7 +101,7 @@ impl Vm {
 						}
 						_ => panic!("var name must be a string (2)")
 					}
-				},
+				}
 				Opcode::SetLocal => {
 					// println!("{}", self.pc);
 					let i = self.next_u8();
@@ -112,17 +112,17 @@ impl Vm {
 						// println!("{}", self.pc);
 						self.locals[i as usize] = val;
 					}
-				},
+				}
 				Opcode::GetLocal => {
 					let i = self.next_u8();
 					let val = self.locals[i as usize].clone();
 					self.push_stack(val);
-				},
+				}
 				Opcode::UnsetLocal => {
 					let n = self.next_u8();
 					let new_len = self.locals.len().saturating_sub(n as usize);
 					self.locals.truncate(new_len);
-				},
+				}
 				Opcode::Time => {
 					let now = std::time::SystemTime::now();
 					let since_the_epoch = now
@@ -130,7 +130,7 @@ impl Vm {
 						.expect("Time went backwards");
 					let ms = since_the_epoch.as_millis() as i128;
 					self.push_stack(Literal::Int(ms));
-				},
+				}
 				Opcode::Jmpn => {
 					let cond = self.pop_stack();
 					let add = self.next_u8();

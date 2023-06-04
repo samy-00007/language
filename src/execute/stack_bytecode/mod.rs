@@ -1,11 +1,9 @@
 pub mod assembler;
-pub mod vm;
 pub mod compiler;
-
+pub mod vm;
 
 // https://blog.subnetzero.io/post/building-language-vm-part-02/
 // https://craftinginterpreters.com/a-virtual-machine.html
-
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum Opcode {
@@ -28,7 +26,6 @@ pub enum Opcode {
 	Jmpn,
 	Igl // illegal
 }
-
 
 impl From<u8> for Opcode {
 	fn from(value: u8) -> Self {
@@ -56,7 +53,7 @@ impl From<u8> for Opcode {
 }
 
 impl From<Opcode> for u8 {
-	fn from(value: Opcode) -> Self {		
+	fn from(value: Opcode) -> Self {
 		match value {
 			Opcode::Hlt => 0,
 			Opcode::Const => 1,

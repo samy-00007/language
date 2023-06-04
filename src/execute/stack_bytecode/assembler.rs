@@ -10,7 +10,6 @@ macro_rules! add_n {
 	};
 }
 
-
 pub struct Assembler(pub Vec<u8>);
 
 impl Assembler {
@@ -30,7 +29,4 @@ impl Assembler {
 	pub fn set_u8(&mut self, n: u8, i: usize) {
 		self.0[i] = n;
 	}
-
 }
-
-

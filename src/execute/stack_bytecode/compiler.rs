@@ -43,7 +43,7 @@ impl Scopes {
 	pub fn resolve_var(&self, n: String) -> usize {
 		for s in &self.locals {
 			if let Some(depth) = s.get(&n) {
-				return *depth
+				return *depth;
 			}
 		}
 		unreachable!()
@@ -87,14 +87,7 @@ fn compile_block(
 	for x in block {
 		count += match x {
 			Stmt::Local { name, t: _, val } => {
-				let n = compile_expr(
-					*val,
-					assembler,
-					constants,
-					constants_ci,
-					ci,
-					scopes
-				);
+				let n = compile_expr(*val, assembler, constants, constants_ci, ci, scopes);
 				let i = scopes.new_var(name);
 				assembler.add_opcode(Opcode::SetLocal);
 				assembler.add_u8(i as u8);
@@ -109,37 +102,14 @@ fn compile_block(
 				// assembler.add_opcode(Opcode::DefGlob);
 				// assembler.add_u8(i as u8);
 			}
-			Stmt::Expr(e) => {
-				compile_expr(
-					e,
-					assembler,
-					constants,
-					constants_ci,
-					ci,
-					scopes
-				)
-			}
+			Stmt::Expr(e) => compile_expr(e, assembler, constants, constants_ci, ci, scopes),
 			Stmt::While { cond, block } => {
-				let mut n = compile_expr(
-					cond,
-					assembler,
-					constants,
-					constants_ci,
-					ci,
-					scopes
-				);
+				let mut n = compile_expr(cond, assembler, constants, constants_ci, ci, scopes);
 				assembler.add_opcode(Opcode::Jmpn);
 				assembler.add_u8(0);
 				let i = count + n + 1;
 				n += 2;
-				n += compile_block(
-					block,
-					assembler,
-					constants,
-					constants_ci,
-					ci,
-					scopes
-				);
+				n += compile_block(block, assembler, constants, constants_ci, ci, scopes);
 				assembler.set_u8((count + n + 2) as u8, i);
 				assembler.add_opcode(Opcode::Jmp);
 				assembler.add_u8(count as u8);
