@@ -50,7 +50,10 @@ where
 
 	pub(super) fn parse_block(&mut self) -> Block {
 		let mut stmts = Vec::new();
-		while !matches!(self.peek_ignore(Token::SemiColon), Some(Token::RBrace) | None) {
+		while !matches!(
+			self.peek_ignore(Token::SemiColon),
+			Some(Token::RBrace) | None
+		) {
 			let stmt = self.parse_statement();
 
 			if matches!(stmt, Stmt::Return(_)) {
@@ -75,7 +78,7 @@ where
 		self.parse_l(end_token, |this| {
 			let name = this.get_ident();
 			this.consume(Token::Colon);
-			let ty = this.get_ident();
+			let ty = this.parse_ty(); // TODO: better parse type
 			Argument { name, ty }
 		})
 	}
@@ -171,7 +174,7 @@ mod tests {
 	use crate::{
 		lexer::Token,
 		parser::{
-			ast::{Argument, Expr, Literal, Operator, ParseError, Stmt, Prefix},
+			ast::{Argument, Expr, Literal, Operator, ParseError, Prefix, Stmt, Ty},
 			Parser
 		}
 	};
@@ -246,15 +249,15 @@ mod tests {
 				vec![
 					Argument {
 						name: "abcd".into(),
-						ty: "number".into()
+						ty: Ty::Ident("number".into())
 					},
 					Argument {
 						name: "efgh".into(),
-						ty: "bool".into()
+						ty: Ty::Ident("bool".into())
 					},
 					Argument {
 						name: "uch65".into(),
-						ty: "string".into()
+						ty: Ty::Ident("string".into())
 					},
 				]
 			);
@@ -424,7 +427,7 @@ mod tests {
 					rhs: n4.clone()
 				}),
 				rhs: n4
-			}
+			},
 		];
 		let mut parsed = Vec::new();
 		for _ in 0..expected.len() {
@@ -440,8 +443,14 @@ mod tests {
 		let mut parser = Parser::new("(+4); (-5);");
 
 		let expected = vec![
-			Stmt::Expr(Expr::Prefix(Prefix::Plus, Expr::Lit(Literal::Int(4)).into())),
-			Stmt::Expr(Expr::Prefix(Prefix::Minus, Expr::Lit(Literal::Int(5)).into()))
+			Stmt::Expr(Expr::Prefix(
+				Prefix::Plus,
+				Expr::Lit(Literal::Int(4)).into()
+			)),
+			Stmt::Expr(Expr::Prefix(
+				Prefix::Minus,
+				Expr::Lit(Literal::Int(5)).into()
+			)),
 		];
 
 		for x in expected {
@@ -450,7 +459,6 @@ mod tests {
 
 		assert_eq!(parser.errors().len(), 0);
 	}
-	
 
 	#[test]
 	fn parse_priority() {

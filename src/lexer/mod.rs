@@ -7,7 +7,8 @@ pub enum Token {
 	Identifier,
 	#[regex(r#""([^"\\]|\\t|\\u|\\n|\\")*""#)]
 	String,
-	#[regex(r"[0-9][0-9_]*(\.[0-9_]+)([eE][\+-]?[0-9_]+)?", priority = 2)] // FIXME: parse nums with e
+	#[regex(r"[0-9][0-9_]*(\.[0-9_]+)([eE][\+-]?[0-9_]+)?", priority = 2)]
+	// FIXME: parse nums with e
 	Float,
 	#[regex(r"[0-9][0-9_]*([eE][\+-]?[0-9_]+)?", priority = 2)]
 	// TODO: expand that (0x, 0b, ...)
@@ -26,6 +27,10 @@ pub enum Token {
 	Fn,
 	#[token("return")]
 	Return,
+	#[token("struct")]
+	Struct,
+	#[token("const")]
+	Const,
 
 	#[token("true")]
 	True,

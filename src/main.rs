@@ -4,39 +4,37 @@
 #![warn(clippy::nursery)]
 // #![warn(clippy::cargo)]
 
+mod execute;
 mod lexer;
 mod parser;
-mod execute;
-
 
 use parser::Parser;
 
-const CODE: &str = "let t = clock();
-let i = 0;
+const CODE: &str = "let t: number = clock();
+let i: number = 0;
 while(clock() - t < 1000) {
 	i = i + 1;
 }
 print(i);";
 
-
-
 fn main() {
-	let code = "fn abcd<T: Display>(a: T) -> number {}";
+	let code = "fn square(a: number) -> number { a * a }";
 
 	let mut parser = Parser::new(code);
 	let parsed = parser.parse();
 	println!("{parsed:?}");
 
-	/*println!("ast walk: ");
-	ast_walk(false);
-	println!();
-	println!("===================");
-	println!();
-	println!("stack-based bytecode vm: ");
-	stack_bytecode(false);*/
 }
 
 
+
+/*println!("ast walk: ");
+ast_walk(false);
+println!();
+println!("===================");
+println!();
+println!("stack-based bytecode vm: ");
+stack_bytecode(false);*/
 // js and python performance with the same code:
 // 		- js: 		i = ~18.8M
 // 		- python: 	i = ~6M
@@ -52,8 +50,8 @@ fn main() {
 #[allow(dead_code)]
 fn ast_walk(debug: bool) {
 	// use std::collections::HashMap;
-	use rustc_hash::FxHashMap as HashMap;
 	use crate::execute::walker::walk;
+	use rustc_hash::FxHashMap as HashMap;
 
 	let mut parser = Parser::new(CODE);
 	let parsed = parser.parse();
@@ -63,8 +61,8 @@ fn ast_walk(debug: bool) {
 	}
 
 	let mut locals = HashMap::default();
-	let args = [0;2];
-	
+	let args = [0; 2];
+
 	if debug {
 		println!("args: {args:?}");
 	}
@@ -95,7 +93,6 @@ fn stack_bytecode(debug: bool) {
 	}
 
 	let mut vm = Vm::new(compiled.0, compiled.1);
-	
+
 	vm.run();
-	
 }

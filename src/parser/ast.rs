@@ -8,21 +8,74 @@ use crate::lexer::Token;
 type E = Box<Expr>;
 pub(super) type Block = Vec<Stmt>;
 
+/*
+#[derive(Eq, PartialEq, Clone, Copy, Hash, Default, Debug)]
+pub struct Span {
+	start: usize,
+	end: usize
+}
+
+impl Index<Span> for str {
+	type Output = str;
+	fn index(&self, index: Span) -> &Self::Output {
+		&self[Range::<usize>::from(index)]
+	}
+}
+
+impl From<Span> for Range<usize> {
+	fn from(value: Span) -> Self {
+		(value.start)..(value.end)
+	}
+}
+
+impl From<Range<usize>> for Span {
+	fn from(value: Range<usize>) -> Self {
+		Self { start: value.start, end: value.end }
+	}
+}
+*/
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Ty {
+	Ident(String),
+	None
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Item {
+	Function {
+		name: String,
+		args: Vec<Argument>,
+		t: Ty,
+		block: Block
+	},
+	Struct {
+		name: String,
+		fields: Vec<Argument>
+	},
+	Constant {
+		name: String,
+		ty: Ty,
+		value: Expr
+	} // TODO: module, use, impl, enum
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Stmt {
+	Item(Item),
 	Local {
 		// var decl
 		name: String,
-		t: Option<String>,
+		t: Option<Ty>,
 		val: E
 	},
-	Function {
-		name: String,
-		generics: Vec<Generic>,
-		args: Vec<Argument>,
-		t: Option<String>,
-		block: Block
-	},
+	// Function {
+	// 	name: String,
+	// 	generics: Vec<Generic>,
+	// 	args: Vec<Argument>,
+	// 	t: Option<String>,
+	// 	block: Block
+	// },
 	If {
 		cond: Expr,
 		block: Block
@@ -114,7 +167,7 @@ pub enum Operator {
 pub enum ParseError {
 	UnexpectedEOF,
 	UnexpectedToken(Token), // TODO: maybe store the token text ?
-	ExpectedTokenButFoundInstead { expected: Token, found: Token},
+	ExpectedTokenButFoundInstead { expected: Token, found: Token },
 	ExpectedTokenButNotFound(Token),
 	ExpectedExprButFoundInstead { expected: Expr, found: Expr },
 	ExpectedExprButNotFound(Expr),
@@ -132,7 +185,7 @@ pub struct Generic {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Argument {
 	pub name: String,
-	pub ty: String
+	pub ty: Ty
 }
 
 //
@@ -144,31 +197,34 @@ impl Display for Stmt {
 			Self::FnReturn(x) => format!("return {x}"),
 			Self::If { cond, block } => format!("if ({}) {{\n{}\n}}", cond, print_s(block, "\n")),
 			Self::Local { name, t, val } => {
-				let t_ = t.as_ref().map_or_else(String::new, |t| format!(": {}", t));
+				let t_ = t
+					.as_ref()
+					.map_or_else(String::new, |t| format!(": {:?}", t));
 				format!("let {name}{t_} = {val};")
 			}
 			Self::Return(x) => format!("{x}"),
-			Self::Function {
-				name,
-				generics,
-				args,
-				t,
-				block
-			} => format!(
-				"fn {}{}({}) {} {{\n{}\n}}",
-				name,
-				print_l(generics, ", ", "<", ">"),
-				args.iter()
-					.map(|x| format!("{}: {}", x.name, x.ty))
-					.collect::<Vec<String>>()
-					.join("\n"),
-				t.as_ref().map_or_else(String::new, |ty| format!("-> {}", ty)),
-				print_s(block, "\n")
-			),
+			// Self::Function {
+			// 	name,
+			// 	generics,
+			// 	args,
+			// 	t,
+			// 	block
+			// } => format!(
+			// 	"fn {}{}({}) {} {{\n{}\n}}",
+			// 	name,
+			// 	print_l(generics, ", ", "<", ">"),
+			// 	args.iter()
+			// 		.map(|x| format!("{}: {}", x.name, x.ty))
+			// 		.collect::<Vec<String>>()
+			// 		.join("\n"),
+			// 	t.as_ref().map_or_else(String::new, |ty| format!("-> {}", ty)),
+			// 	print_s(block, "\n")
+			// ),
 			Self::While { cond, block } => {
 				format!("while ({}) {{\n{}\n}}", cond, print_s(block, "\n"))
 			}
-			Self::Error => "<STMT ERROR>".to_string()
+			Self::Error => "<STMT ERROR>".to_string(),
+			_ => todo!()
 		};
 		write!(f, "{res}")
 	}
@@ -268,17 +324,25 @@ impl Display for ParseError {
 		let res = match self {
 			Self::UnexpectedEOF => "Expected expression but found <EOF>".to_string(),
 			Self::UnexpectedToken(t) => format!("Unexpected token '{t:?}' found"),
-			Self::ExpectedTokenButFoundInstead{expected: a, found: b} => {
+			Self::ExpectedTokenButFoundInstead {
+				expected: a,
+				found: b
+			} => {
 				format!("Expected token '{a:?}' but found '{b:?}' instead")
 			}
 			Self::ExpectedTokenButNotFound(t) => format!("Expected token '{t:?}'"),
-			Self::ExpectedExprButFoundInstead{expected: a, found: b} => {
+			Self::ExpectedExprButFoundInstead {
+				expected: a,
+				found: b
+			} => {
 				format!("Expected expression '{a:?}' but found '{b:?}' instead")
 			}
 			Self::ExpectedExprButNotFound(t) => format!("Expected expression '{t:?}'"),
 			Self::IntParseError(s) => format!("Could not parse '{s}' into an int"),
 			Self::FloatParseError(s) => format!("Could not parse '{s}' into an float"),
-			Self::NoImplicitTypeAllowed => "Implicit type is not allowed, please explicit the type".into()
+			Self::NoImplicitTypeAllowed => {
+				"Implicit type is not allowed, please explicit the type".into()
+			}
 		};
 		write!(f, "{res}")
 	}
@@ -403,7 +467,6 @@ impl From<Operator> for Token {
 		}
 	}
 }
-
 
 fn print_l<T: Display>(vec: &[T], sep: &str, surround_l: &str, surround_r: &str) -> String {
 	let s = print_s(vec, sep);

@@ -1,15 +1,16 @@
 pub mod ast;
 mod expressions;
+mod item;
 mod statements;
 
 use crate::lexer::Token;
 use logos::{Logos, SpannedIter};
 use std::{iter::Peekable, ops::Range};
 
-use self::ast::{Block, ParseError, Operator};
+use self::ast::{Block, Operator, ParseError, Ty};
 
 pub type RetItem = (Result<Token, ()>, Range<usize>);
-pub type Item = (Token, Range<usize>);
+pub type IteratorItem = (Token, Range<usize>);
 
 pub struct Parser<'a, I>
 where
@@ -20,12 +21,13 @@ where
 	range: Range<usize>,
 	// phase: ,
 	errors: Vec<(ParseError, Range<usize>)>,
-	allow_implicit_types: bool
-	// TODO: fn should_skip_token
+	allow_implicit_types: bool // TODO: fn should_skip_token
 }
 
 impl<'a> Parser<'a, SpannedIter<'a, Token>> {
-	pub fn new(source: &'a str/*, allow_implicit_types: bool*/) -> Parser<'a, SpannedIter<'a, Token>> {
+	pub fn new(
+		source: &'a str /*, allow_implicit_types: bool*/
+	) -> Parser<'a, SpannedIter<'a, Token>> {
 		let lex = Token::lexer(source);
 		Self {
 			tokens: lex.spanned().peekable(),
@@ -41,14 +43,14 @@ impl<'a, I> Parser<'a, I>
 where
 	I: Iterator<Item = RetItem>
 {
-	fn unwrap_ref(t: Option<&RetItem>) -> Option<Item> {
+	fn unwrap_ref(t: Option<&RetItem>) -> Option<IteratorItem> {
 		match t {
 			Some(&(Ok(ref token), ref r)) => Some((*token, r.clone())),
 			_ => None
 		}
 	}
 
-	const fn unwrap(t: Option<RetItem>) -> Option<Item> {
+	const fn unwrap(t: Option<RetItem>) -> Option<IteratorItem> {
 		match t {
 			Some((Ok(token), r)) => Some((token, r)),
 			_ => None
@@ -96,25 +98,39 @@ where
 	}
 
 	pub(self) fn consume(&mut self, expected: Token) {
-		self.consume_raw(expected, false);
+		let Some(next) = self.next() else {
+			return self.push_error(ParseError::ExpectedTokenButNotFound(expected));
+		};
+
+		if next != expected {
+			self.push_error(ParseError::ExpectedTokenButFoundInstead {expected, found: next});
+		}
+		//self.consume_raw(expected, false);
 	}
 
+	/*
 	pub(self) fn consume_raw(&mut self, expected: Token, consume_if_error: bool) {
 		match self.peek_range() {
 			Some((token, range)) => {
 				if token == expected {
 					self.next();
 				} else {
-					self.errors.push((ParseError::ExpectedTokenButFoundInstead {expected, found: token }, range));
+					self.errors.push((
+						ParseError::ExpectedTokenButFoundInstead {
+							expected,
+							found: token
+						},
+						range
+					));
 					if consume_if_error {
 						self.next();
 					}
 				}
-			},
+			}
 			None => self.push_error(ParseError::ExpectedTokenButNotFound(expected))
 		}
 	}
-
+*/
 	// utils
 
 	pub(self) const fn is_lit(token: Token) -> bool {
@@ -138,14 +154,16 @@ where
 				| Token::AsteriskEq
 				| Token::Slash | Token::SlashEq
 				| Token::Percent | Token::PercentEq
-				| Token::Anpersand | Token::ExclamationMark
+				| Token::Anpersand
+				| Token::ExclamationMark
 				| Token::AnpersandEq
 				| Token::Bar | Token::BarEq
 				| Token::Caret | Token::CaretEq
 				| Token::LShift | Token::LShiftEq
 				| Token::RShift | Token::RShiftEq
 				| Token::Gte | Token::Lte
-				| Token::LChevron | Token::RChevron
+				| Token::LChevron
+				| Token::RChevron
 				| Token::Eq | Token::Neq
 				| Token::And | Token::AndEq
 				| Token::Or | Token::OrEq
@@ -161,6 +179,11 @@ where
 		)
 	}
 
+	// TODO: detect with visibility (pub)
+	pub(self) const fn is_item_start(token: Token) -> bool {
+		matches!(token, Token::Fn | Token::Const | Token::Struct)
+	}
+
 	pub(self) fn get_ident(&mut self) -> String {
 		let Some(ident) = self.peek() else {
 			self.push_error(ParseError::UnexpectedEOF);
@@ -173,7 +196,7 @@ where
 			self.push_error(ParseError::ExpectedTokenButFoundInstead {
 				expected: Token::Identifier,
 				found: ident
-		});
+			});
 			String::new() // TODO: error message in string ?
 		}
 	}
@@ -185,7 +208,7 @@ where
 			Op::Not | Op::BitNot => 13,
 			Op::Exponent => 12,
 			Op::Mul | Op::Div | Op::Rem => 11,
-			Op::Add | Op::Sub  => 10,
+			Op::Add | Op::Sub => 10,
 			Op::LShift | Op::RShift => 9,
 			Op::Lt | Op::Lte | Op::Gt | Op::Gte => 8,
 			Op::Eq | Op::Neq => 7,
@@ -194,7 +217,17 @@ where
 			Op::BitOr => 4,
 			Op::And => 3,
 			Op::Or => 2,
-			Op::Assign | Op::AddEq | Op::SubEq | Op::MulEq | Op::DivEq | Op::RemEq | Op::BitAndEq | Op::BitOrEq | Op::BitXorEq | Op::LShiftEq | Op::RShiftEq => 1,
+			Op::Assign
+			| Op::AddEq
+			| Op::SubEq
+			| Op::MulEq
+			| Op::DivEq
+			| Op::RemEq
+			| Op::BitAndEq
+			| Op::BitOrEq
+			| Op::BitXorEq
+			| Op::LShiftEq
+			| Op::RShiftEq => 1,
 			_ => 0
 		}
 	}
@@ -202,7 +235,7 @@ where
 	#[allow(clippy::range_plus_one)]
 	pub(self) const fn eof_range(&self) -> Range<usize> {
 		let len = self.source.len();
-		len..len+1
+		len..len + 1
 	}
 
 	pub(self) fn is_eof(&mut self) -> bool {
@@ -218,17 +251,21 @@ where
 		self.errors.push((error, range));
 	}
 
-	pub(self) fn parse_l<T, F: Fn(&mut Parser<'a, I>) -> T>(&mut self, end_token: Token, f: F) -> Vec<T>{
+	pub(self) fn parse_l<T, F: Fn(&mut Parser<'a, I>) -> T>(
+		&mut self,
+		end_token: Token,
+		f: F
+	) -> Vec<T> {
 		let mut args = Vec::new();
 		loop {
 			match self.peek() {
 				None => {
 					self.push_error(ParseError::UnexpectedEOF);
 					break;
-				},
+				}
 				Some(x) => {
 					if x == end_token || x == Token::SemiColon {
-						break
+						break;
 					}
 				}
 			}
@@ -237,7 +274,8 @@ where
 
 			if !self.at(end_token) {
 				self.consume(Token::Comma);
-			} else if self.at(Token::Comma) { // trailing comma
+			} else if self.at(Token::Comma) {
+				// trailing comma
 				self.next();
 			}
 			if self.is_eof() {
@@ -246,6 +284,12 @@ where
 			}
 		}
 		args
+	}
+
+	pub(self) fn parse_ty(&mut self) -> Ty {
+		// TODO: change that
+		let name = self.get_ident();
+		Ty::Ident(name)
 	}
 
 	//
@@ -266,4 +310,3 @@ where
 		(parsed, &self.errors)
 	}
 }
-
