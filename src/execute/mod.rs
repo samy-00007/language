@@ -3,9 +3,9 @@
 use crate::parser::ast::Literal;
 use std::ops::{Add, Div, Mul, Neg, Sub};
 
+pub mod register_bytecode;
 pub mod stack_bytecode;
 pub mod walker;
-// pub mod register_bytecode;
 
 impl Add for Literal {
 	type Output = Self;
