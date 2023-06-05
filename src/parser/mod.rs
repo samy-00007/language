@@ -57,7 +57,7 @@ where
 		}
 	}
 
-	pub(self) fn peek(&mut self) -> Option<Token> {
+	fn peek(&mut self) -> Option<Token> {
 		let next = self.peek_range();
 		if let Some((t, _)) = next {
 			Some(t)
@@ -66,7 +66,7 @@ where
 		}
 	}
 
-	pub(self) fn peek_ignore(&mut self, ignore: Token) -> Option<Token> {
+	fn peek_ignore(&mut self, ignore: Token) -> Option<Token> {
 		let mut peek = self.peek();
 		while peek == Some(ignore) {
 			self.next();
@@ -79,7 +79,7 @@ where
 		Parser::<'a, I>::unwrap_ref(self.tokens.peek())
 	}
 
-	pub(self) fn next(&mut self) -> Option<Token> {
+	fn next(&mut self) -> Option<Token> {
 		let next = Parser::<'a, I>::unwrap(self.tokens.next());
 		if let Some((t, r)) = next {
 			self.range = r;
@@ -89,15 +89,15 @@ where
 		}
 	}
 
-	pub(self) fn at(&mut self, expected: Token) -> bool {
+	fn at(&mut self, expected: Token) -> bool {
 		self.peek().map_or(false, |token| token == expected)
 	}
 
-	pub(self) fn text(&self) -> String {
+	fn text(&self) -> String {
 		self.source[self.range.clone()].to_string()
 	}
 
-	pub(self) fn consume(&mut self, expected: Token) {
+	fn consume(&mut self, expected: Token) {
 		let Some(next) = self.next() else {
 			return self.push_error(ParseError::ExpectedTokenButNotFound(expected));
 		};
@@ -109,7 +109,7 @@ where
 	}
 
 	/*
-	pub(self) fn consume_raw(&mut self, expected: Token, consume_if_error: bool) {
+	fn consume_raw(&mut self, expected: Token, consume_if_error: bool) {
 		match self.peek_range() {
 			Some((token, range)) => {
 				if token == expected {
@@ -133,18 +133,18 @@ where
 */
 	// utils
 
-	pub(self) const fn is_lit(token: Token) -> bool {
+	const fn is_lit(token: Token) -> bool {
 		matches!(
 			token,
 			Token::String | Token::Int | Token::Float | Token::True | Token::False
 		)
 	}
 
-	pub(self) fn is_ident(token: Token) -> bool {
+	fn is_ident(token: Token) -> bool {
 		token == Token::Identifier
 	}
 
-	pub(self) const fn is_op(token: Token) -> bool {
+	const fn is_op(token: Token) -> bool {
 		// TODO: expand that
 		matches!(
 			token,
@@ -172,7 +172,7 @@ where
 		)
 	}
 
-	pub(self) const fn is_keyword(token: Token) -> bool {
+	const fn is_keyword(token: Token) -> bool {
 		matches!(
 			token,
 			Token::Fn | Token::Let | Token::If | Token::For | Token::While | Token::Return
@@ -180,11 +180,11 @@ where
 	}
 
 	// TODO: detect with visibility (pub)
-	pub(self) const fn is_item_start(token: Token) -> bool {
+	const fn is_item_start(token: Token) -> bool {
 		matches!(token, Token::Fn | Token::Const | Token::Struct)
 	}
 
-	pub(self) fn get_ident(&mut self) -> String {
+	fn get_ident(&mut self) -> String {
 		let Some(ident) = self.peek() else {
 			self.push_error(ParseError::UnexpectedEOF);
 			return String::new()
@@ -201,7 +201,7 @@ where
 		}
 	}
 
-	pub(self) const fn operator_precedence(op: Operator) -> usize {
+	const fn operator_precedence(op: Operator) -> usize {
 		// https://en.wikipedia.org/wiki/Order_of_operations#Programming_languages
 		type Op = Operator;
 		match op {
@@ -233,16 +233,16 @@ where
 	}
 
 	#[allow(clippy::range_plus_one)]
-	pub(self) const fn eof_range(&self) -> Range<usize> {
+	const fn eof_range(&self) -> Range<usize> {
 		let len = self.source.len();
 		len..len + 1
 	}
 
-	pub(self) fn is_eof(&mut self) -> bool {
+	fn is_eof(&mut self) -> bool {
 		self.peek().is_none()
 	}
 
-	pub(self) fn push_error(&mut self, error: ParseError) {
+	fn push_error(&mut self, error: ParseError) {
 		let range = if error == ParseError::UnexpectedEOF {
 			self.eof_range()
 		} else {
@@ -251,7 +251,7 @@ where
 		self.errors.push((error, range));
 	}
 
-	pub(self) fn parse_l<T, F: Fn(&mut Parser<'a, I>) -> T>(
+	fn parse_l<T, F: Fn(&mut Parser<'a, I>) -> T>(
 		&mut self,
 		end_token: Token,
 		f: F
@@ -286,7 +286,7 @@ where
 		args
 	}
 
-	pub(self) fn parse_ty(&mut self) -> Ty {
+	fn parse_ty(&mut self) -> Ty {
 		// TODO: change that
 		let name = self.get_ident();
 		Ty::Ident(name)
