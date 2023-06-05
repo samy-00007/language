@@ -103,34 +103,37 @@ where
 		};
 
 		if next != expected {
-			self.push_error(ParseError::ExpectedTokenButFoundInstead {expected, found: next});
+			self.push_error(ParseError::ExpectedTokenButFoundInstead {
+				expected,
+				found: next
+			});
 		}
 		//self.consume_raw(expected, false);
 	}
 
 	/*
-	fn consume_raw(&mut self, expected: Token, consume_if_error: bool) {
-		match self.peek_range() {
-			Some((token, range)) => {
-				if token == expected {
-					self.next();
-				} else {
-					self.errors.push((
-						ParseError::ExpectedTokenButFoundInstead {
-							expected,
-							found: token
-						},
-						range
-					));
-					if consume_if_error {
+		fn consume_raw(&mut self, expected: Token, consume_if_error: bool) {
+			match self.peek_range() {
+				Some((token, range)) => {
+					if token == expected {
 						self.next();
+					} else {
+						self.errors.push((
+							ParseError::ExpectedTokenButFoundInstead {
+								expected,
+								found: token
+							},
+							range
+						));
+						if consume_if_error {
+							self.next();
+						}
 					}
 				}
+				None => self.push_error(ParseError::ExpectedTokenButNotFound(expected))
 			}
-			None => self.push_error(ParseError::ExpectedTokenButNotFound(expected))
 		}
-	}
-*/
+	*/
 	// utils
 
 	const fn is_lit(token: Token) -> bool {
@@ -251,11 +254,7 @@ where
 		self.errors.push((error, range));
 	}
 
-	fn parse_l<T, F: Fn(&mut Parser<'a, I>) -> T>(
-		&mut self,
-		end_token: Token,
-		f: F
-	) -> Vec<T> {
+	fn parse_l<T, F: Fn(&mut Parser<'a, I>) -> T>(&mut self, end_token: Token, f: F) -> Vec<T> {
 		let mut args = Vec::new();
 		loop {
 			match self.peek() {

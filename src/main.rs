@@ -23,10 +23,7 @@ fn main() {
 	let mut parser = Parser::new(code);
 	let parsed = parser.parse();
 	println!("{parsed:?}");
-
 }
-
-
 
 /*println!("ast walk: ");
 ast_walk(false);
