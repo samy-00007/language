@@ -4,9 +4,9 @@
 
 mod execute;
 mod lexer;
-mod parser;
+// mod parser;
 
-use parser::Parser;
+// use parser::Parser;
 
 use execute::register_bytecode::{assembler::Assembler, vm::Vm, Instr, JmpMode};
 

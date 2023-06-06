@@ -44,10 +44,6 @@ impl Vm {
 		loop {
 			let op = std::ptr::addr_of!(self.program[self.pc]);
 			let op = unsafe { op.cast::<Opcode>().read_unaligned() };
-			// println!("{:?}", self.program);
-			// println!("{:?}", self.pc);
-			// println!("{op:?}");
-
 
 			self.pc += 1;
 			match op {
@@ -123,6 +119,7 @@ impl Vm {
 	}
 
 	#[inline(always)]
+	#[allow(clippy::assertions_on_constants)]
 	fn read_reg(&mut self) -> usize {
 		#[cfg(debug_assertions)]
 		assert!(Reg::BITS == u8::BITS);

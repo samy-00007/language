@@ -11,14 +11,14 @@ macro_rules! add_n {
 
 pub struct Assembler {
 	pub program: Vec<u8>,
-	pc: usize
+	// pc: usize
 }
 
 impl Assembler {
 	pub const fn new() -> Self {
 		Self {
 			program: Vec::new(),
-			pc: 0
+			// pc: 0
 		}
 	}
 
