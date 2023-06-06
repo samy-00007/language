@@ -84,6 +84,9 @@ impl Vm {
 					let reg = self.read_reg();
 					self.registers[reg] = Register::Int(ms);
 				}
+				Opcode::Call => {
+					let address = self.read_address();
+				}
 			}
 		}
 	}

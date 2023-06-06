@@ -5,11 +5,14 @@ use std::{
 	ops::{Add, Div, Mul, Sub}
 };
 
+use super::Address;
+
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub enum StackValue {
 	Int(i128),
 	Float(f64),
-	Bool(bool)
+	Bool(bool),
+	Address(Address)
 }
 
 impl Add for StackValue {
@@ -17,17 +20,20 @@ impl Add for StackValue {
 
 	fn add(self, rhs: Self) -> Self::Output {
 		match self {
-			Self::Bool(_) => panic!("Can't add bools (lhs)"),
+			Self::Bool(_) => unreachable!(),
 			Self::Int(x) => match rhs {
-				Self::Bool(_) => panic!("Can't add bools (rhs)"),
+				Self::Bool(_) => unreachable!(),
 				Self::Int(y) => Self::Int(x + y),
-				Self::Float(y) => Self::Float(x as f64 + y)
+				Self::Float(y) => Self::Float(x as f64 + y),
+				Self::Address(_) => unreachable!()
 			},
 			Self::Float(x) => match rhs {
-				Self::Bool(_) => panic!("Can't add bools (rhs)"),
+				Self::Bool(_) => unreachable!(),
 				Self::Float(y) => Self::Float(x + y),
-				Self::Int(y) => Self::Float(x + y as f64)
-			}
+				Self::Int(y) => Self::Float(x + y as f64),
+				Self::Address(_) => unreachable!()
+			},
+			Self::Address(_) => unreachable!()
 		}
 	}
 }
@@ -37,17 +43,20 @@ impl Sub for StackValue {
 
 	fn sub(self, rhs: Self) -> Self::Output {
 		match self {
-			Self::Bool(_) => panic!("Can't add bools (lhs)"),
+			Self::Bool(_) => unreachable!(),
 			Self::Int(x) => match rhs {
-				Self::Bool(_) => panic!("Can't add bools (rhs)"),
+				Self::Bool(_) => unreachable!(),
 				Self::Int(y) => Self::Int(x - y),
-				Self::Float(y) => Self::Float(x as f64 - y)
+				Self::Float(y) => Self::Float(x as f64 - y),
+				Self::Address(_) => unreachable!()
 			},
 			Self::Float(x) => match rhs {
-				Self::Bool(_) => panic!("Can't add bools (rhs)"),
+				Self::Bool(_) => unreachable!(),
 				Self::Float(y) => Self::Float(x - y),
-				Self::Int(y) => Self::Float(x - y as f64)
-			}
+				Self::Int(y) => Self::Float(x - y as f64),
+				Self::Address(_) => unreachable!()
+			},
+			Self::Address(_) => unreachable!()
 		}
 	}
 }
@@ -57,17 +66,20 @@ impl Mul for StackValue {
 
 	fn mul(self, rhs: Self) -> Self::Output {
 		match self {
-			Self::Bool(_) => panic!("Can't add bools (lhs)"),
+			Self::Bool(_) => unreachable!(),
 			Self::Int(x) => match rhs {
-				Self::Bool(_) => panic!("Can't add bools (rhs)"),
+				Self::Bool(_) => unreachable!(),
 				Self::Int(y) => Self::Int(x * y),
-				Self::Float(y) => Self::Float(x as f64 * y)
+				Self::Float(y) => Self::Float(x as f64 * y),
+				Self::Address(_) => unreachable!()
 			},
 			Self::Float(x) => match rhs {
-				Self::Bool(_) => panic!("Can't add bools (rhs)"),
+				Self::Bool(_) => unreachable!(),
 				Self::Float(y) => Self::Float(x * y),
-				Self::Int(y) => Self::Float(x * y as f64)
-			}
+				Self::Int(y) => Self::Float(x * y as f64),
+				Self::Address(_) => unreachable!()
+			},
+			Self::Address(_) => unreachable!()
 		}
 	}
 }
@@ -77,17 +89,20 @@ impl Div for StackValue {
 
 	fn div(self, rhs: Self) -> Self::Output {
 		match self {
-			Self::Bool(_) => panic!("Can't add bools (lhs)"),
+			Self::Bool(_) => unreachable!(),
 			Self::Int(x) => match rhs {
-				Self::Bool(_) => panic!("Can't add bools (rhs)"),
+				Self::Bool(_) => unreachable!(),
 				Self::Int(y) => Self::Float(x as f64 / y as f64),
-				Self::Float(y) => Self::Float(x as f64 / y)
+				Self::Float(y) => Self::Float(x as f64 / y),
+				Self::Address(_) => unreachable!()
 			},
 			Self::Float(x) => match rhs {
-				Self::Bool(_) => panic!("Can't add bools (rhs)"),
+				Self::Bool(_) => unreachable!(),
 				Self::Float(y) => Self::Float(x / y),
-				Self::Int(y) => Self::Float(x / y as f64)
-			}
+				Self::Int(y) => Self::Float(x / y as f64),
+				Self::Address(_) => unreachable!()
+			},
+			Self::Address(_) => unreachable!()
 		}
 	}
 }
@@ -95,17 +110,20 @@ impl Div for StackValue {
 impl StackValue {
 	pub fn cmp(self, rhs: &Self) -> Ordering {
 		match self {
-			Self::Bool(_) => panic!("Can't add bools (lhs)"),
+			Self::Bool(_) => unreachable!(),
 			Self::Int(x) => match rhs {
-				Self::Bool(_) => panic!("Can't add bools (rhs)"),
+				Self::Bool(_) => unreachable!(),
 				Self::Int(y) => x.cmp(y),
-				Self::Float(y) => cmp(x as f64, *y)
+				Self::Float(y) => cmp(x as f64, *y),
+				Self::Address(_) => unreachable!()
 			},
 			Self::Float(x) => match rhs {
-				Self::Bool(_) => panic!("Can't add bools (rhs)"),
+				Self::Bool(_) => unreachable!(),
 				Self::Float(y) => cmp(x, *y),
-				Self::Int(y) => cmp(x, *y as f64)
-			}
+				Self::Int(y) => cmp(x, *y as f64),
+				Self::Address(_) => unreachable!()
+			},
+			Self::Address(_) => unreachable!()
 		}
 	}
 }

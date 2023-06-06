@@ -32,6 +32,7 @@ pub enum Opcode {
 	Mul,
 	Div,
 	Cmp,
+	Call,
 	Clock
 }
 
@@ -52,6 +53,7 @@ pub enum Instr {
 	Mul { reg_1: Reg, reg_2: Reg, dst: Reg },
 	Div { reg_1: Reg, reg_2: Reg, dst: Reg },
 	Cmp(Reg, Reg),
+	Call(Address),
 	Clock(Reg)
 }
 
@@ -135,6 +137,10 @@ impl Instr {
 				assembler.add_u8(Opcode::Cmp as u8);
 				assembler.add_u8(reg_1);
 				assembler.add_u8(reg_2);
+			}
+			Self::Call(address) => {
+				assembler.add_u8(Opcode::Call as u8);
+				assembler.add_u16(address);
 			}
 			Self::Clock(reg) => {
 				assembler.add_u8(Opcode::Clock as u8);
