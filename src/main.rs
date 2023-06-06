@@ -24,22 +24,15 @@ fn main() {
  */
 	let mut assembler = Assembler::new();
 
-	assembler.add_instr(Instr::Load(1, 10000));
-	assembler.add_instr(Instr::Load(2, 13));
-	assembler.add_instr(Instr::Load(3, 1));
-	assembler.add_instr(Instr::Jmp(23));
-	assembler.add_instr(Instr::Add {
-		reg_1: 0,
-		reg_2: 2,
-		dst: 0
-	});
-	assembler.add_instr(Instr::Sub {
-		reg_1: 1,
-		reg_2: 3,
-		dst: 1
-	});
-	assembler.add_instr(Instr::Cmp(1, 4));
-	assembler.add_instr(Instr::Jgt(15));
+	assembler.add_instr(Instr::Clock(0));
+	assembler.add_instr(Instr::Load(1, 1));
+	assembler.add_instr(Instr::Load(4, 1000));
+	assembler.add_instr(Instr::Jmp(JmpMode::RelativeForward, 4));
+	assembler.add_instr(Instr::Add { reg_1: 2, reg_2: 1, dst: 2 });
+	assembler.add_instr(Instr::Clock(3));
+	assembler.add_instr(Instr::Sub { reg_1: 3, reg_2: 0, dst: 3 });
+	assembler.add_instr(Instr::Cmp(3, 4));
+	assembler.add_instr(Instr::Jlt(JmpMode::Absolute, 14));
 	assembler.add_instr(Instr::Halt);
 
 	let program = assembler.program;
