@@ -1,89 +1,11 @@
 pub mod assembler;
 pub mod compiler;
+mod stack;
 pub mod vm;
 
-use std::{ops::{Add, Sub}, cmp::Ordering};
+pub use stack::*;
 
 use assembler::Assembler;
-
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
-pub enum StackValue {
-	Int(i128),
-	Float(f64),
-	Bool(bool)
-}
-
-impl Add for StackValue {
-	type Output = Self;
-	
-	fn add(self, rhs: Self) -> Self::Output {
-		match self {
-			Self::Bool(_) => panic!("Can't add bools (lhs)"),
-			Self::Int(x) => match rhs {
-				Self::Bool(_) => panic!("Can't add bools (rhs)"),
-				Self::Int(y) => Self::Int(x + y),
-				Self::Float(y) => Self::Float(x as f64 + y),
-			},
-			Self::Float(x) => match rhs {
-				Self::Bool(_) => panic!("Can't add bools (rhs)"),
-				Self::Float(y) => Self::Float(x + y),
-				Self::Int(y) => Self::Float(x + y as f64)	
-			}
-		}
-	}
-}
-
-
-impl Sub for StackValue {
-	type Output = Self;
-	
-	fn sub(self, rhs: Self) -> Self::Output {
-		match self {
-			Self::Bool(_) => panic!("Can't add bools (lhs)"),
-			Self::Int(x) => match rhs {
-				Self::Bool(_) => panic!("Can't add bools (rhs)"),
-				Self::Int(y) => Self::Int(x - y),
-				Self::Float(y) => Self::Float(x as f64 - y),
-			},
-			Self::Float(x) => match rhs {
-				Self::Bool(_) => panic!("Can't add bools (rhs)"),
-				Self::Float(y) => Self::Float(x - y),
-				Self::Int(y) => Self::Float(x - y as f64)	
-			}
-		}
-	}
-}
-
-impl StackValue {
-	pub fn cmp(self, rhs: &Self) -> Ordering {
-		match self {
-			Self::Bool(_) => panic!("Can't add bools (lhs)"),
-			Self::Int(x) => match rhs {
-				Self::Bool(_) => panic!("Can't add bools (rhs)"),
-				Self::Int(y) => x.cmp(y),
-				Self::Float(y) => cmp(x as f64, *y),
-			},
-			Self::Float(x) => match rhs {
-				Self::Bool(_) => panic!("Can't add bools (rhs)"),
-				Self::Float(y) => cmp(x, *y),
-				Self::Int(y) => cmp(x, *y as f64)	
-			}
-		}
-	}
-}
-
-
-pub fn cmp(a: f64, b: f64) -> Ordering {
-	let diff = a - b;
-	if diff.abs() < f64::EPSILON {
-		Ordering::Equal
-	} else if diff > f64::EPSILON {
-		Ordering::Greater
-	} else {
-		Ordering::Less
-	}
-}
-
 
 // TODO: accumulator
 // TODO: maybe no need for jmp, just instructions for loops
