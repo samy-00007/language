@@ -29,6 +29,8 @@ pub enum Opcode {
 	Jge,
 	Add,
 	Sub,
+	Mul,
+	Div,
 	Cmp,
 	Clock
 }
@@ -47,6 +49,8 @@ pub enum Instr {
 	Jge(JmpMode, Address),
 	Add { reg_1: Reg, reg_2: Reg, dst: Reg },
 	Sub { reg_1: Reg, reg_2: Reg, dst: Reg }, // TODO: handle literal, instead of only registers
+	Mul { reg_1: Reg, reg_2: Reg, dst: Reg },
+	Div { reg_1: Reg, reg_2: Reg, dst: Reg },
 	Cmp(Reg, Reg),
 	Clock(Reg)
 }
@@ -111,6 +115,18 @@ impl Instr {
 			}
 			Self::Sub { reg_1, reg_2, dst } => {
 				assembler.add_u8(Opcode::Sub as u8);
+				assembler.add_u8(reg_1);
+				assembler.add_u8(reg_2);
+				assembler.add_u8(dst);
+			}
+			Self::Mul { reg_1, reg_2, dst } => {
+				assembler.add_u8(Opcode::Mul as u8);
+				assembler.add_u8(reg_1);
+				assembler.add_u8(reg_2);
+				assembler.add_u8(dst);
+			}
+			Self::Div { reg_1, reg_2, dst } => {
+				assembler.add_u8(Opcode::Div as u8);
 				assembler.add_u8(reg_1);
 				assembler.add_u8(reg_2);
 				assembler.add_u8(dst);

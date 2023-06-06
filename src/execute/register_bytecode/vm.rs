@@ -1,6 +1,6 @@
 #![allow(unused_unsafe)]
 #![allow(clippy::cast_lossless)]
-use super::{Address, Lit, Opcode, Reg, JmpMode, StackValue};
+use super::{Address, JmpMode, Lit, Opcode, Reg, StackValue};
 use std::cmp::Ordering;
 
 macro_rules! read_bytes {
@@ -10,7 +10,7 @@ macro_rules! read_bytes {
 			let bytes = &self.program[self.pc..(self.pc + $s)];
 			self.pc += $s;
 			$t::from_le_bytes(bytes.try_into().unwrap())
-		}	
+		}
 	};
 }
 
@@ -22,9 +22,8 @@ pub struct Vm {
 	cmp_reg: Ordering,
 	program: Program,
 	pc: usize,
-	stack: Vec<Register>
-	//pc: *const u8,
-	//start: *const u8
+	stack: Vec<Register> //pc: *const u8,
+	                     //start: *const u8
 }
 
 impl Vm {
@@ -35,9 +34,8 @@ impl Vm {
 			cmp_reg: Ordering::Equal,
 			program,
 			pc: 0,
-			stack: Vec::new()
-			// pc: program.as_ptr(),
-			// start: program.as_ptr()
+			stack: Vec::new() // pc: program.as_ptr(),
+			                  // start: program.as_ptr()
 		}
 	}
 
@@ -49,6 +47,7 @@ impl Vm {
 			// println!("{:?}", self.program);
 			// println!("{:?}", self.pc);
 			// println!("{op:?}");
+
 
 			self.pc += 1;
 			match op {
@@ -70,20 +69,10 @@ impl Vm {
 				Opcode::Jle => self.jump(Ordering::is_le),
 				Opcode::Jgt => self.jump(Ordering::is_gt),
 				Opcode::Jge => self.jump(Ordering::is_ge),
-				Opcode::Add => {
-					let reg_1 = self.read_reg();
-					let reg_2 = self.read_reg();
-					let dst = self.read_reg();
-
-					self.registers[dst] = self.registers[reg_1] + self.registers[reg_2]; // TODO: handle overflow
-				}
-				Opcode::Sub => {
-					let reg_1 = self.read_reg();
-					let reg_2 = self.read_reg();
-					let dst = self.read_reg();
-
-					self.registers[dst] = self.registers[reg_1] - self.registers[reg_2]; // TODO: handle overflow
-				}
+				Opcode::Add => self.op(std::ops::Add::add),
+				Opcode::Sub => self.op(std::ops::Sub::sub),
+				Opcode::Mul => self.op(std::ops::Mul::mul),
+				Opcode::Div => self.op(std::ops::Div::div),
 				Opcode::Cmp => {
 					let reg_1 = self.read_reg();
 					let reg_2 = self.read_reg();
@@ -101,6 +90,15 @@ impl Vm {
 				}
 			}
 		}
+	}
+
+	#[inline(always)]
+	fn op(&mut self, op: fn(Register, Register) -> Register) {
+		let reg_1 = self.read_reg();
+		let reg_2 = self.read_reg();
+		let dst = self.read_reg();
+
+		self.registers[dst] = op(self.registers[reg_1], self.registers[reg_2]); // TODO: handle overflow
 	}
 
 	#[inline]
@@ -144,10 +142,10 @@ impl Vm {
 
 	read_bytes!(read_u16, u16, 2);
 	read_bytes!(read_i16, i16, 2);
-	
+
 	read_bytes!(read_u32, u32, 4);
 	read_bytes!(read_i32, i32, 4);
-	
+
 	read_bytes!(read_u64, u64, 8);
 	read_bytes!(read_i64, i64, 8);
 }
