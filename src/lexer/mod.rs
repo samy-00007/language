@@ -173,9 +173,9 @@ fn block_comment(lex: &mut Lexer<Token>) -> FilterResult<(), ()> {
 // TODO: add more tests
 #[cfg(test)]
 mod tests {
-	use pretty_assertions::assert_eq;
 	use crate::lexer::Token;
 	use logos::Logos;
+	use pretty_assertions::assert_eq;
 
 	#[test]
 	fn test_lex() {

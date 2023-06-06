@@ -26,7 +26,7 @@ impl Assembler {
 	add_n!(add_u16, u16);
 	add_n!(add_u32, u32);
 	add_n!(add_u64, u64);
-	
+
 	add_n!(add_i8, i8);
 	add_n!(add_i16, i16);
 	add_n!(add_i32, i32);
