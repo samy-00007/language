@@ -8,10 +8,12 @@ mod parser;
 
 use parser::Parser;
 
-use execute::register_bytecode::{assembler::Assembler, vm::Vm, Instr};
+use execute::register_bytecode::{assembler::Assembler, vm::Vm, Instr, JmpMode};
+
+// #![feature(test)]
+// mod bench;
 
 fn main() {
-
 	/*
 	let t = clock();
 	let i = 0;
