@@ -13,7 +13,7 @@ use assembler::Assembler;
 // TODO: maybe do graph coloring for register allocation
 
 pub type Reg = u8;
-pub type Lit = i16;
+pub type Lit = i64;
 pub type Address = u16;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -33,6 +33,9 @@ pub enum Opcode {
 	Div,
 	Cmp,
 	Call,
+	Ret,
+	Push,
+	Pop,
 	Clock
 }
 
@@ -54,6 +57,9 @@ pub enum Instr {
 	Div { reg_1: Reg, reg_2: Reg, dst: Reg },
 	Cmp(Reg, Reg),
 	Call(Address),
+	Ret,
+	Push(Reg),
+	Pop(Reg),
 	Clock(Reg)
 }
 
@@ -77,7 +83,7 @@ impl Instr {
 			Self::Load(reg, value) => {
 				assembler.add_u8(Opcode::Load as u8);
 				assembler.add_u8(reg);
-				assembler.add_i16(value);
+				assembler.add_i64(value);
 			}
 			Self::Move { src, dst } => {
 				assembler.add_u8(Opcode::Move as u8);
@@ -146,6 +152,32 @@ impl Instr {
 				assembler.add_u8(Opcode::Clock as u8);
 				assembler.add_u8(reg);
 			}
+			Self::Ret => {
+				assembler.add_u8(Opcode::Ret as u8);
+			}
+			Self::Push(reg) => {
+				assembler.add_u8(Opcode::Push as u8);
+				assembler.add_u8(reg);
+			}
+			Self::Pop(reg) => {
+				assembler.add_u8(Opcode::Pop as u8);
+				assembler.add_u8(reg);
+			}
 		}
+	}
+
+	#[allow(clippy::cast_possible_truncation)]
+	pub const fn size(self) -> usize {
+		let mut n = 1; // opcode
+		n += match self {
+			Self::Load(_, _) => Reg::BITS + Lit::BITS,
+			Self::Move { src: _, dst: _ } | Self::Cmp(_, _) => 2 * Reg::BITS,
+			Self::Jge(_, _) | Self::Jgt(_, _) | Self::Jle(_, _) | Self::Jmp(_, _) => std::mem::size_of::<JmpMode>() as u32 * 8 + Address::BITS,
+			Self::Add { reg_1: _, reg_2: _, dst: _ } | Self::Sub { reg_1: _, reg_2: _, dst: _ } | Self::Mul { reg_1: _, reg_2: _, dst: _ } | Self::Div { reg_1: _, reg_2: _, dst: _ } => 3 * Reg::BITS,
+			Self::Call(_) => Address::BITS,
+			Self::Clock(_) | Self::Pop(_) | Self::Push(_) => Reg::BITS,
+			_ => 0
+		} / 8;
+		n as usize
 	}
 }

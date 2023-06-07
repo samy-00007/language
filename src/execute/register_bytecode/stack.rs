@@ -5,125 +5,61 @@ use std::{
 	ops::{Add, Div, Mul, Sub}
 };
 
-use super::Address;
+use super::{Address, Lit};
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub enum StackValue {
-	Int(i128),
+	Int(Lit),
 	Float(f64),
 	Bool(bool),
 	Address(Address)
 }
 
-impl Add for StackValue {
-	type Output = Self;
 
-	fn add(self, rhs: Self) -> Self::Output {
-		match self {
-			Self::Bool(_) => unreachable!(),
-			Self::Int(x) => match rhs {
-				Self::Bool(_) => unreachable!(),
-				Self::Int(y) => Self::Int(x + y),
-				Self::Float(y) => Self::Float(x as f64 + y),
-				Self::Address(_) => unreachable!()
-			},
-			Self::Float(x) => match rhs {
-				Self::Bool(_) => unreachable!(),
-				Self::Float(y) => Self::Float(x + y),
-				Self::Int(y) => Self::Float(x + y as f64),
-				Self::Address(_) => unreachable!()
-			},
-			Self::Address(_) => unreachable!()
+macro_rules! stack_op {
+	($trait:ident, $name:ident, $op:tt, $all_floats:literal) => {
+		impl $trait for StackValue {
+			type Output = Self;
+		
+			fn $name(self, rhs: Self) -> Self::Output {
+				match self {
+					Self::Int(x) => match rhs {
+						Self::Int(y) => if $all_floats { Self::Float(x as f64 $op y as f64) } else { Self::Int(x $op y) },
+						Self::Float(y) => Self::Float(x as f64 $op y),
+						_ => unreachable!()
+					},
+					Self::Float(x) => match rhs {
+						Self::Float(y) => Self::Float(x $op y),
+						Self::Int(y) => Self::Float(x $op y as f64),
+						_ => unreachable!()
+					},
+					_ => unreachable!()
+				}
+			}
 		}
-	}
+	};
 }
 
-impl Sub for StackValue {
-	type Output = Self;
+stack_op!(Add, add, +, false);
+stack_op!(Sub, sub, -, false);
+stack_op!(Mul, mul, -, false);
+stack_op!(Div, div, /, true);
 
-	fn sub(self, rhs: Self) -> Self::Output {
-		match self {
-			Self::Bool(_) => unreachable!(),
-			Self::Int(x) => match rhs {
-				Self::Bool(_) => unreachable!(),
-				Self::Int(y) => Self::Int(x - y),
-				Self::Float(y) => Self::Float(x as f64 - y),
-				Self::Address(_) => unreachable!()
-			},
-			Self::Float(x) => match rhs {
-				Self::Bool(_) => unreachable!(),
-				Self::Float(y) => Self::Float(x - y),
-				Self::Int(y) => Self::Float(x - y as f64),
-				Self::Address(_) => unreachable!()
-			},
-			Self::Address(_) => unreachable!()
-		}
-	}
-}
-
-impl Mul for StackValue {
-	type Output = Self;
-
-	fn mul(self, rhs: Self) -> Self::Output {
-		match self {
-			Self::Bool(_) => unreachable!(),
-			Self::Int(x) => match rhs {
-				Self::Bool(_) => unreachable!(),
-				Self::Int(y) => Self::Int(x * y),
-				Self::Float(y) => Self::Float(x as f64 * y),
-				Self::Address(_) => unreachable!()
-			},
-			Self::Float(x) => match rhs {
-				Self::Bool(_) => unreachable!(),
-				Self::Float(y) => Self::Float(x * y),
-				Self::Int(y) => Self::Float(x * y as f64),
-				Self::Address(_) => unreachable!()
-			},
-			Self::Address(_) => unreachable!()
-		}
-	}
-}
-
-impl Div for StackValue {
-	type Output = Self;
-
-	fn div(self, rhs: Self) -> Self::Output {
-		match self {
-			Self::Bool(_) => unreachable!(),
-			Self::Int(x) => match rhs {
-				Self::Bool(_) => unreachable!(),
-				Self::Int(y) => Self::Float(x as f64 / y as f64),
-				Self::Float(y) => Self::Float(x as f64 / y),
-				Self::Address(_) => unreachable!()
-			},
-			Self::Float(x) => match rhs {
-				Self::Bool(_) => unreachable!(),
-				Self::Float(y) => Self::Float(x / y),
-				Self::Int(y) => Self::Float(x / y as f64),
-				Self::Address(_) => unreachable!()
-			},
-			Self::Address(_) => unreachable!()
-		}
-	}
-}
 
 impl StackValue {
 	pub fn cmp(self, rhs: &Self) -> Ordering {
 		match self {
-			Self::Bool(_) => unreachable!(),
 			Self::Int(x) => match rhs {
-				Self::Bool(_) => unreachable!(),
 				Self::Int(y) => x.cmp(y),
 				Self::Float(y) => cmp(x as f64, *y),
-				Self::Address(_) => unreachable!()
+				_ => unreachable!()
 			},
 			Self::Float(x) => match rhs {
-				Self::Bool(_) => unreachable!(),
 				Self::Float(y) => cmp(x, *y),
 				Self::Int(y) => cmp(x, *y as f64),
-				Self::Address(_) => unreachable!()
+				_ => unreachable!()
 			},
-			Self::Address(_) => unreachable!()
+			_ => unreachable!()
 		}
 	}
 }

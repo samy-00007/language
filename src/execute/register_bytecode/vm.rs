@@ -51,7 +51,7 @@ impl Vm {
 				Opcode::Nop => {}
 				Opcode::Load => {
 					let reg = self.read_reg();
-					let val = Register::Int(self.read_lit() as i128);
+					let val = Register::Int(self.read_lit());
 					self.registers[reg] = val;
 				}
 				Opcode::Move => {
@@ -80,12 +80,29 @@ impl Vm {
 						.duration_since(std::time::UNIX_EPOCH)
 						.expect("Time went backwards");
 					#[allow(clippy::cast_possible_wrap)]
-					let ms = since_the_epoch.as_millis() as i128;
+					let ms = since_the_epoch.as_millis() as Lit;
 					let reg = self.read_reg();
 					self.registers[reg] = Register::Int(ms);
 				}
 				Opcode::Call => {
+					self.stack.push(StackValue::Address(self.pc as Address));
 					let address = self.read_address();
+					self.pc = address as usize;
+				}
+				Opcode::Ret => {
+					let StackValue::Address(address) = (unsafe { self.stack.pop().unwrap() }) else {
+						unreachable!()
+					};
+					self.pc = address as usize;
+				}
+				Opcode::Push => {
+					let reg = self.read_reg();
+					self.stack.push(self.registers[reg]);
+				}
+				Opcode::Pop => {
+					let val = self.stack.pop().unwrap();
+					let reg = self.read_reg();
+					self.registers[reg] = val;
 				}
 			}
 		}
@@ -118,7 +135,7 @@ impl Vm {
 
 	#[inline(always)]
 	fn read_lit(&mut self) -> Lit {
-		self.read_i16()
+		self.read_i64()
 	}
 
 	#[inline(always)]
