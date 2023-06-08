@@ -2,9 +2,9 @@
 #![warn(clippy::nursery)]
 #![allow(clippy::inline_always)]
 
-mod utils;
 mod execute;
 mod lexer;
+mod utils;
 // mod parser;
 
 // use parser::Parser;

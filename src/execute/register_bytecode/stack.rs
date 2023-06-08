@@ -1,10 +1,10 @@
 #![allow(clippy::module_name_repetitions)]
+use super::{Address, Lit};
+use crate::utils::stack::Stack;
 use std::{
 	cmp::Ordering,
 	ops::{Add, Div, Mul, Sub}
 };
-use super::{Address, Lit};
-use crate::utils::stack::Stack;
 
 pub struct VmStack {
 	stack: Vec<StackValue>
@@ -52,12 +52,11 @@ pub enum StackValue {
 	Address(Address)
 }
 
-
 macro_rules! stack_op {
 	($trait:ident, $name:ident, $op:tt, $all_floats:literal) => {
 		impl $trait for StackValue {
 			type Output = Self;
-		
+
 			fn $name(self, rhs: Self) -> Self::Output {
 				match self {
 					Self::Int(x) => match rhs {
@@ -82,7 +81,6 @@ stack_op!(Sub, sub, -, false);
 stack_op!(Mul, mul, -, false);
 stack_op!(Div, div, /, true);
 
-
 impl StackValue {
 	pub fn cmp(self, rhs: &Self) -> Ordering {
 		match self {
@@ -101,7 +99,6 @@ impl StackValue {
 	}
 }
 
-
 pub fn cmp(a: f64, b: f64) -> Ordering {
 	let diff = a - b;
 	if diff.abs() < f64::EPSILON {
@@ -112,7 +109,6 @@ pub fn cmp(a: f64, b: f64) -> Ordering {
 		Ordering::Less
 	}
 }
-
 
 /*
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -245,7 +241,7 @@ use super::StackValue;
 	fn sub() {
 		let a = StackValue::Int(1462);
 		let b = StackValue::Int(1000);
-		
+
 		let c = a - b;
 
 

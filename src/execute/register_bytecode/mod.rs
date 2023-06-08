@@ -1,4 +1,5 @@
 pub mod assembler;
+mod callstack;
 pub mod compiler;
 mod stack;
 pub mod vm;
@@ -172,8 +173,29 @@ impl Instr {
 		n += match self {
 			Self::Load(_, _) => Reg::BITS + Lit::BITS,
 			Self::Move { src: _, dst: _ } | Self::Cmp(_, _) => 2 * Reg::BITS,
-			Self::Jge(_, _) | Self::Jgt(_, _) | Self::Jle(_, _) | Self::Jmp(_, _) => std::mem::size_of::<JmpMode>() as u32 * 8 + Address::BITS,
-			Self::Add { reg_1: _, reg_2: _, dst: _ } | Self::Sub { reg_1: _, reg_2: _, dst: _ } | Self::Mul { reg_1: _, reg_2: _, dst: _ } | Self::Div { reg_1: _, reg_2: _, dst: _ } => 3 * Reg::BITS,
+			Self::Jge(_, _) | Self::Jgt(_, _) | Self::Jle(_, _) | Self::Jmp(_, _) => {
+				std::mem::size_of::<JmpMode>() as u32 * 8 + Address::BITS
+			}
+			Self::Add {
+				reg_1: _,
+				reg_2: _,
+				dst: _
+			}
+			| Self::Sub {
+				reg_1: _,
+				reg_2: _,
+				dst: _
+			}
+			| Self::Mul {
+				reg_1: _,
+				reg_2: _,
+				dst: _
+			}
+			| Self::Div {
+				reg_1: _,
+				reg_2: _,
+				dst: _
+			} => 3 * Reg::BITS,
 			Self::Call(_) => Address::BITS,
 			Self::Clock(_) | Self::Pop(_) | Self::Push(_) => Reg::BITS,
 			_ => 0

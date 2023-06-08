@@ -24,9 +24,10 @@ pub struct Vm {
 	cmp_reg: Ordering,
 	program: Program,
 	pc: usize,
-	stack: VmStack //pc: *const u8,
-	                     //start: *const u8
+	stack: VmStack
 }
+//pc: *const u8,
+//start: *const u8
 
 impl Vm {
 	pub fn new(program: Program) -> Self {
@@ -36,8 +37,7 @@ impl Vm {
 			cmp_reg: Ordering::Equal,
 			program,
 			pc: 0,
-			stack: VmStack::new() // pc: program.as_ptr(),
-			                  // start: program.as_ptr()
+			stack: VmStack::new() 
 		}
 	}
 
