@@ -32,6 +32,10 @@ pub enum Opcode {
 	Sub,
 	Mul,
 	Div,
+	Addl,
+	Subl,
+	Mull,
+	Divl,
 	Cmp,
 	Call,
 	Ret,
@@ -55,9 +59,13 @@ pub enum Instr {
 	Jgt(JmpMode, Address),
 	Jge(JmpMode, Address),
 	Add { reg_1: Reg, reg_2: Reg, dst: Reg },
-	Sub { reg_1: Reg, reg_2: Reg, dst: Reg }, // TODO: handle literal, instead of only registers
+	Sub { reg_1: Reg, reg_2: Reg, dst: Reg },
 	Mul { reg_1: Reg, reg_2: Reg, dst: Reg },
 	Div { reg_1: Reg, reg_2: Reg, dst: Reg },
+	Addl { reg_1: Reg, val: Lit, dst: Reg },
+	Subl { reg_1: Reg, val: Lit, dst: Reg },
+	Mull { reg_1: Reg, val: Lit, dst: Reg },
+	Divl { reg_1: Reg, val: Lit, dst: Reg },
 	Cmp(Reg, Reg),
 	// u8: arg_count
 	Call(Address, u8),
@@ -117,26 +125,30 @@ impl Instr {
 		Halt; 
 		Nop 
 		;;
-		Load; (reg, add_u8, u8), (value, add_i64, i64);
-		Jmp; (mode, add_u8, u8), (address, add_u16, u16);
-		Jle; (mode, add_u8, u8), (address, add_u16, u16);
-		Jlt; (mode, add_u8, u8), (address, add_u16, u16);
-		Jgt; (mode, add_u8, u8), (address, add_u16, u16);
-		Jge; (mode, add_u8, u8), (address, add_u16, u16);
-		Cmp; (reg_1, add_u8, u8), (reg_2, add_u8, u8);
-		Call; (address, add_u16, u16), (arg_count, add_u8, u8);
-		Clock; (reg, add_u8, u8);
-		Ret; (reg, add_u8, u8);
-		Push; (reg, add_u8, u8);
-		Pop; (reg, add_u8, u8);
-		Print; (reg, add_u8, u8);
-		GetArg; (reg, add_u8, u8), (i, add_u8, u8)
+		Load; (reg, add_u8, u8), (value, add_i64, Lit);
+		Jmp; (mode, add_u8, u8), (address, add_u16, Address);
+		Jle; (mode, add_u8, u8), (address, add_u16, Address);
+		Jlt; (mode, add_u8, u8), (address, add_u16, Address);
+		Jgt; (mode, add_u8, u8), (address, add_u16, Address);
+		Jge; (mode, add_u8, u8), (address, add_u16, Address);
+		Cmp; (reg_1, add_u8, Reg), (reg_2, add_u8, Reg);
+		Call; (address, add_u16, Address), (arg_count, add_u8, u8);
+		Clock; (reg, add_u8, Reg);
+		Ret; (reg, add_u8, Reg);
+		Push; (reg, add_u8, Reg);
+		Pop; (reg, add_u8, Reg);
+		Print; (reg, add_u8, Reg);
+		GetArg; (reg, add_u8, Reg), (i, add_u8, u8)
 		;;
-		Move; (src, add_u8, u8), (dst, add_u8, u8);
-		Add; (reg_1, add_u8, u8), (reg_2, add_u8, u8), (dst, add_u8, u8);
-		Sub; (reg_1, add_u8, u8), (reg_2, add_u8, u8), (dst, add_u8, u8);
-		Mul; (reg_1, add_u8, u8), (reg_2, add_u8, u8), (dst, add_u8, u8);
-		Div; (reg_1, add_u8, u8), (reg_2, add_u8, u8), (dst, add_u8, u8)
+		Move; (src, add_u8, Reg), (dst, add_u8, Reg);
+		Add; (reg_1, add_u8, Reg), (reg_2, add_u8, Reg), (dst, add_u8, Reg);
+		Sub; (reg_1, add_u8, Reg), (reg_2, add_u8, Reg), (dst, add_u8, Reg);
+		Mul; (reg_1, add_u8, Reg), (reg_2, add_u8, Reg), (dst, add_u8, Reg);
+		Div; (reg_1, add_u8, Reg), (reg_2, add_u8, Reg), (dst, add_u8, Reg);
+		Addl; (reg_1, add_u8, Reg), (val, add_i64, Lit), (dst, add_u8, Reg);
+		Subl; (reg_1, add_u8, Reg), (val, add_i64, Lit), (dst, add_u8, Reg);
+		Mull; (reg_1, add_u8, Reg), (val, add_i64, Lit), (dst, add_u8, Reg);
+		Divl; (reg_1, add_u8, Reg), (val, add_i64, Lit), (dst, add_u8, Reg)
 	];
 
 	#[allow(clippy::cast_possible_truncation)]

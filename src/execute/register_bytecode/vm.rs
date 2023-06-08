@@ -75,6 +75,10 @@ impl Vm {
 				Opcode::Sub => self.op(std::ops::Sub::sub),
 				Opcode::Mul => self.op(std::ops::Mul::mul),
 				Opcode::Div => self.op(std::ops::Div::div),
+				Opcode::Addl => self.op_lit(std::ops::Add::add),
+				Opcode::Subl => self.op_lit(std::ops::Sub::sub),
+				Opcode::Mull => self.op_lit(std::ops::Mul::mul),
+				Opcode::Divl => self.op_lit(std::ops::Div::div),
 				Opcode::Cmp => {
 					let reg_1 = self.read_reg();
 					let reg_2 = self.read_reg();
@@ -152,6 +156,15 @@ impl Vm {
 		let dst = self.read_reg();
 
 		self.set_register(dst, op(self.get_register(reg_1), self.get_register(reg_2))); // TODO: handle overflow
+	}
+	
+	#[inline(always)]
+	fn op_lit(&mut self, op: fn(Register, Register) -> Register) {
+		let reg_1 = self.read_reg();
+		let val = self.read_lit();
+		let dst = self.read_reg();
+
+		self.set_register(dst, op(self.get_register(reg_1), StackValue::Int(val))); // TODO: handle overflow
 	}
 
 	#[inline]
