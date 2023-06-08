@@ -1,11 +1,48 @@
 #![allow(clippy::module_name_repetitions)]
-
 use std::{
 	cmp::Ordering,
 	ops::{Add, Div, Mul, Sub}
 };
-
 use super::{Address, Lit};
+use crate::utils::stack::Stack;
+
+pub struct VmStack {
+	stack: Vec<StackValue>
+}
+
+impl Stack for VmStack {
+	type Value = StackValue;
+
+	fn push(&mut self, val: Self::Value) {
+		self.stack.push(val);
+	}
+
+	fn pop(&mut self) -> Self::Value {
+		self.stack.pop().unwrap()
+	}
+
+	fn get(&mut self, i: usize) -> Self::Value {
+		*self.stack.get(i).unwrap()
+	}
+
+	fn set(&mut self, i: usize, val: Self::Value) {
+		*self.stack.get_mut(i).unwrap() = val;
+	}
+
+	fn len(&self) -> usize {
+		self.stack.len()
+	}
+
+	fn reset(&mut self) {
+		self.stack.clear();
+	}
+}
+
+impl VmStack {
+	pub fn new() -> Self {
+		Self { stack: Vec::new() }
+	}
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub enum StackValue {
