@@ -76,112 +76,68 @@ pub enum JmpMode {
 	RelativeBackward
 }
 
-impl Instr {
-	#[inline]
-	pub fn compile(self, assembler: &mut Assembler) {
-		match self {
-			Self::Halt => {
-				assembler.add_u8(Opcode::Halt as u8);
-			}
-			Self::Nop => {
-				assembler.add_u8(Opcode::Nop as u8);
-			}
-			Self::Load(reg, value) => {
-				assembler.add_u8(Opcode::Load as u8);
-				assembler.add_u8(reg);
-				assembler.add_i64(value);
-			}
-			Self::Move { src, dst } => {
-				assembler.add_u8(Opcode::Move as u8);
-				assembler.add_u8(src);
-				assembler.add_u8(dst);
-			}
-			Self::Jmp(mode, address) => {
-				assembler.add_u8(Opcode::Jmp as u8);
-				assembler.add_u8(mode as u8);
-				assembler.add_u16(address);
-			}
-			Self::Jle(mode, address) => {
-				assembler.add_u8(Opcode::Jle as u8);
-				assembler.add_u8(mode as u8);
-				assembler.add_u16(address);
-			}
-			Self::Jlt(mode, address) => {
-				assembler.add_u8(Opcode::Jlt as u8);
-				assembler.add_u8(mode as u8);
-				assembler.add_u16(address);
-			}
-			Self::Jgt(mode, address) => {
-				assembler.add_u8(Opcode::Jgt as u8);
-				assembler.add_u8(mode as u8);
-				assembler.add_u16(address);
-			}
-			Self::Jge(mode, address) => {
-				assembler.add_u8(Opcode::Jge as u8);
-				assembler.add_u8(mode as u8);
-				assembler.add_u16(address);
-			}
-			Self::Add { reg_1, reg_2, dst } => {
-				assembler.add_u8(Opcode::Add as u8);
-				assembler.add_u8(reg_1);
-				assembler.add_u8(reg_2);
-				assembler.add_u8(dst);
-			}
-			Self::Sub { reg_1, reg_2, dst } => {
-				assembler.add_u8(Opcode::Sub as u8);
-				assembler.add_u8(reg_1);
-				assembler.add_u8(reg_2);
-				assembler.add_u8(dst);
-			}
-			Self::Mul { reg_1, reg_2, dst } => {
-				assembler.add_u8(Opcode::Mul as u8);
-				assembler.add_u8(reg_1);
-				assembler.add_u8(reg_2);
-				assembler.add_u8(dst);
-			}
-			Self::Div { reg_1, reg_2, dst } => {
-				assembler.add_u8(Opcode::Div as u8);
-				assembler.add_u8(reg_1);
-				assembler.add_u8(reg_2);
-				assembler.add_u8(dst);
-			}
-			Self::Cmp(reg_1, reg_2) => {
-				assembler.add_u8(Opcode::Cmp as u8);
-				assembler.add_u8(reg_1);
-				assembler.add_u8(reg_2);
-			}
-			Self::Call(address, arg_count) => {
-				assembler.add_u8(Opcode::Call as u8);
-				assembler.add_u16(address);
-				assembler.add_u8(arg_count);
-			}
-			Self::Clock(reg) => {
-				assembler.add_u8(Opcode::Clock as u8);
-				assembler.add_u8(reg);
-			}
-			Self::Ret(reg) => {
-				assembler.add_u8(Opcode::Ret as u8);
-				assembler.add_u8(reg);
-			}
-			Self::Push(reg) => {
-				assembler.add_u8(Opcode::Push as u8);
-				assembler.add_u8(reg);
-			}
-			Self::Pop(reg) => {
-				assembler.add_u8(Opcode::Pop as u8);
-				assembler.add_u8(reg);
-			}
-			Self::GetArg(reg, n) => {
-				assembler.add_u8(Opcode::GetArg as u8);
-				assembler.add_u8(reg);
-				assembler.add_u8(n);
-			}
-			Self::Print(reg) => {
-				assembler.add_u8(Opcode::Print as u8);
-				assembler.add_u8(reg);
+
+macro_rules! match_ops {
+	[
+		$($name_1:ident);* ;;
+		$($name_2:ident; $(($a:ident, $fn:ident, $t:ty)),*);* ;;
+		$($name_3:ident; $(($a_:ident, $fn_:ident, $t_:ty)),*);*
+		] => {
+		pub fn compile(self, assembler: &mut Assembler) {
+			match self {
+				$(
+					Self::$name_1 => {
+						assembler.add_u8(Opcode::$name_1 as u8);
+					}
+				),*
+
+				$(
+					Self::$name_2 ( $($a),* ) => {
+						assembler.add_u8(Opcode::$name_2 as u8);
+						$(
+							assembler.$fn($a as $t);
+						)*
+					}
+				),*
+				$(
+					Self::$name_3 { $($a_),* } => {
+						assembler.add_u8(Opcode::$name_3 as u8);
+						$(
+							assembler.$fn_($a_ as $t_);
+						)*
+					}
+				),*
 			}
 		}
-	}
+	};
+}
+
+impl Instr {
+	match_ops![
+		Halt; 
+		Nop 
+		;;
+		Load; (reg, add_u8, u8), (value, add_i64, i64);
+		Jmp; (mode, add_u8, u8), (address, add_u16, u16);
+		Jle; (mode, add_u8, u8), (address, add_u16, u16);
+		Jlt; (mode, add_u8, u8), (address, add_u16, u16);
+		Jgt; (mode, add_u8, u8), (address, add_u16, u16);
+		Jge; (mode, add_u8, u8), (address, add_u16, u16);
+		Cmp; (reg_1, add_u8, u8), (reg_2, add_u8, u8);
+		Call; (address, add_u16, u16), (arg_count, add_u8, u8);
+		Clock; (reg, add_u8, u8);
+		Ret; (reg, add_u8, u8);
+		Push; (reg, add_u8, u8);
+		Pop; (reg, add_u8, u8);
+		Print; (reg, add_u8, u8);
+		GetArg; (reg, add_u8, u8), (i, add_u8, u8)
+		;;
+		Move; (src, add_u8, u8), (dst, add_u8, u8);
+		Add; (reg_1, add_u8, u8), (reg_2, add_u8, u8), (dst, add_u8, u8);
+		Sub; (reg_1, add_u8, u8), (reg_2, add_u8, u8), (dst, add_u8, u8);
+		Mul; (reg_1, add_u8, u8), (reg_2, add_u8, u8), (dst, add_u8, u8);
+		Div; (reg_1, add_u8, u8), (reg_2, add_u8, u8), (dst, add_u8, u8)
+	];
 
 	#[allow(clippy::cast_possible_truncation)]
 	pub const fn size(self) -> usize {
