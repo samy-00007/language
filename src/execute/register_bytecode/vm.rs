@@ -2,7 +2,7 @@
 #![allow(clippy::cast_lossless)]
 use crate::utils::stack::Stack;
 
-use super::{Address, JmpMode, Lit, Opcode, Reg, StackValue, VmStack};
+use super::{Address, JmpMode, Lit, Opcode, Reg, StackValue, VmStack, callstack::{CallStack, CallFrame}};
 use std::cmp::Ordering;
 
 macro_rules! read_bytes {
@@ -17,14 +17,14 @@ macro_rules! read_bytes {
 }
 
 type Program = Vec<u8>;
-type Register = StackValue;
+pub type Register = StackValue;
 
 pub struct Vm {
-	pub registers: [Register; 256],
 	cmp_reg: Ordering,
 	program: Program,
 	pc: usize,
-	stack: VmStack
+	stack: VmStack,
+	call_stack: CallStack
 }
 //pc: *const u8,
 //start: *const u8
@@ -33,11 +33,11 @@ impl Vm {
 	pub fn new(program: Program) -> Self {
 		assert!(!program.is_empty());
 		Self {
-			registers: [StackValue::Int(0); 256],
 			cmp_reg: Ordering::Equal,
 			program,
 			pc: 0,
-			stack: VmStack::new() 
+			stack: VmStack::new(),
+			call_stack: CallStack::new()
 		}
 	}
 
@@ -54,13 +54,13 @@ impl Vm {
 				Opcode::Load => {
 					let reg = self.read_reg();
 					let val = Register::Int(self.read_lit());
-					self.registers[reg] = val;
+					self.set_register(reg, val);
 				}
 				Opcode::Move => {
 					let src = self.read_reg();
 					let dst = self.read_reg();
 
-					self.registers[dst] = self.registers[src];
+					self.set_register(dst, self.get_register(src));
 				}
 				Opcode::Jmp => self.jump(|_| true),
 				Opcode::Jlt => self.jump(Ordering::is_lt),
@@ -74,7 +74,7 @@ impl Vm {
 				Opcode::Cmp => {
 					let reg_1 = self.read_reg();
 					let reg_2 = self.read_reg();
-					self.cmp_reg = self.registers[reg_1].cmp(&self.registers[reg_2]);
+					self.cmp_reg = self.get_register(reg_1).cmp(&self.get_register(reg_2));
 				}
 				Opcode::Clock => {
 					let now = std::time::SystemTime::now();
@@ -84,30 +84,61 @@ impl Vm {
 					#[allow(clippy::cast_possible_wrap)]
 					let ms = since_the_epoch.as_millis() as Lit;
 					let reg = self.read_reg();
-					self.registers[reg] = Register::Int(ms);
+					self.set_register(reg, Register::Int(ms));
 				}
 				Opcode::Call => {
-					self.stack.push(StackValue::Address(self.pc as Address));
 					let address = self.read_address();
+					let arg_count = self.read_u8() as usize;
+					self.call_stack.push(CallFrame::new(self.pc, arg_count, self.stack.len() - arg_count));
 					self.pc = address as usize;
 				}
 				Opcode::Ret => {
-					let StackValue::Address(address) = (unsafe { self.stack.pop() }) else {
-						unreachable!()
-					};
-					self.pc = address as usize;
+					let reg = self.read_reg();
+					let ret_value = self.get_register(reg);
+					self.stack.push(ret_value);
+
+					let callframe = self.call_stack.pop();
+					self.pc = callframe.ret_pc;
 				}
 				Opcode::Push => {
 					let reg = self.read_reg();
-					self.stack.push(self.registers[reg]);
+					self.stack.push(self.get_register(reg));
 				}
 				Opcode::Pop => {
 					let val = self.stack.pop();
 					let reg = self.read_reg();
-					self.registers[reg] = val;
+					// println!("[Pop] val: ({val:?}), reg: {reg}");
+					self.set_register(reg, val);
+				}
+				Opcode::GetArg => {
+					let reg = self.read_reg();
+					let i = self.read_u8() as usize;
+					let frame = self.call_stack.last();
+					let val = self.stack.get(frame.arg0_i + i);
+
+					// println!("[GetArg] val: ({val:?}), reg: {reg}");
+
+					self.set_register(reg, val);
+				}
+				Opcode::Print => {
+					let reg = self.read_reg();
+					let val = self.get_register(reg);
+					println!("[Print] val: ({val:?})");
 				}
 			}
 		}
+	}
+
+	#[inline]
+	fn get_register(&self, reg: Reg) -> Register {
+		let frame = self.call_stack.last();
+		frame.registers[reg as usize]
+	}
+
+	#[inline]
+	fn set_register(&mut self, reg: Reg, val: Register) {
+		let mut frame = self.call_stack.last_mut();
+		frame.registers[reg as usize] = val;
 	}
 
 	#[inline(always)]
@@ -116,7 +147,7 @@ impl Vm {
 		let reg_2 = self.read_reg();
 		let dst = self.read_reg();
 
-		self.registers[dst] = op(self.registers[reg_1], self.registers[reg_2]); // TODO: handle overflow
+		self.set_register(dst, op(self.get_register(reg_1), self.get_register(reg_2))); // TODO: handle overflow
 	}
 
 	#[inline]
@@ -142,10 +173,10 @@ impl Vm {
 
 	#[inline(always)]
 	#[allow(clippy::assertions_on_constants)]
-	fn read_reg(&mut self) -> usize {
+	fn read_reg(&mut self) -> Reg {
 		#[cfg(debug_assertions)]
 		assert!(Reg::BITS == u8::BITS);
-		self.read_u8() as usize
+		self.read_u8()
 	}
 
 	#[inline(always)]
