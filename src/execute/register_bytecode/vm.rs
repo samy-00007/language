@@ -47,6 +47,10 @@ impl Vm {
 			let op = std::ptr::addr_of!(self.program[self.pc]);
 			let op = unsafe { op.cast::<Opcode>().read_unaligned() };
 
+			// println!("{:?}", self.program);
+			// println!("{op:?}");
+			// println!("{}\n", self.pc);
+
 			self.pc += 1;
 			match op {
 				Opcode::Halt => break,

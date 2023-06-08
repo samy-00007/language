@@ -37,7 +37,9 @@ pub enum Opcode {
 	Ret,
 	Push,
 	Pop,
-	Clock
+	GetArg,
+	Clock,
+	Print
 }
 
 // TODO: use derive macro to generate the compile automatically
@@ -57,11 +59,14 @@ pub enum Instr {
 	Mul { reg_1: Reg, reg_2: Reg, dst: Reg },
 	Div { reg_1: Reg, reg_2: Reg, dst: Reg },
 	Cmp(Reg, Reg),
-	Call(Address),
-	Ret,
+	// u8: arg_count
+	Call(Address, u8),
+	Ret(Reg),
 	Push(Reg),
 	Pop(Reg),
-	Clock(Reg)
+	GetArg(Reg, u8),
+	Clock(Reg),
+	Print(Reg)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -145,16 +150,18 @@ impl Instr {
 				assembler.add_u8(reg_1);
 				assembler.add_u8(reg_2);
 			}
-			Self::Call(address) => {
+			Self::Call(address, arg_count) => {
 				assembler.add_u8(Opcode::Call as u8);
 				assembler.add_u16(address);
+				assembler.add_u8(arg_count);
 			}
 			Self::Clock(reg) => {
 				assembler.add_u8(Opcode::Clock as u8);
 				assembler.add_u8(reg);
 			}
-			Self::Ret => {
+			Self::Ret(reg) => {
 				assembler.add_u8(Opcode::Ret as u8);
+				assembler.add_u8(reg);
 			}
 			Self::Push(reg) => {
 				assembler.add_u8(Opcode::Push as u8);
@@ -164,13 +171,22 @@ impl Instr {
 				assembler.add_u8(Opcode::Pop as u8);
 				assembler.add_u8(reg);
 			}
+			Self::GetArg(reg, n) => {
+				assembler.add_u8(Opcode::GetArg as u8);
+				assembler.add_u8(reg);
+				assembler.add_u8(n);
+			}
+			Self::Print(reg) => {
+				assembler.add_u8(Opcode::Print as u8);
+				assembler.add_u8(reg);
+			}
 		}
 	}
 
 	#[allow(clippy::cast_possible_truncation)]
 	pub const fn size(self) -> usize {
 		let mut n = 1; // opcode
-		n += match self {
+		let to_add = match self {
 			Self::Load(_, _) => Reg::BITS + Lit::BITS,
 			Self::Move { src: _, dst: _ } | Self::Cmp(_, _) => 2 * Reg::BITS,
 			Self::Jge(_, _) | Self::Jgt(_, _) | Self::Jle(_, _) | Self::Jmp(_, _) => {
@@ -196,10 +212,13 @@ impl Instr {
 				reg_2: _,
 				dst: _
 			} => 3 * Reg::BITS,
-			Self::Call(_) => Address::BITS,
-			Self::Clock(_) | Self::Pop(_) | Self::Push(_) => Reg::BITS,
+			Self::Call(_, _) => Address::BITS + u8::BITS,
+			Self::Clock(_) | Self::Pop(_) | Self::Push(_) | Self::Ret(_) => Reg::BITS,
+			Self::GetArg(_, _) => Reg::BITS + u8::BITS,
 			_ => 0
-		} / 8;
+		};
+		assert!(to_add % 8 == 0);
+		n += to_add / 8;
 		n as usize
 	}
 }

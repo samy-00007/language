@@ -34,8 +34,13 @@ impl Assembler {
 
 	pub fn add_instr(&mut self, instr: Instr) -> usize {
 		instr.compile(self);
+		let old_pc = self.pc;
 		self.pc += instr.size();
-		self.pc
+		old_pc
+	}
+
+	pub fn set_val(&mut self, i: usize, val: u8) {
+		self.program[i] = val;
 	}
 
 	// pub fn push_function(&mut self) {}

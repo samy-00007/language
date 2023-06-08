@@ -11,6 +11,8 @@ mod utils;
 
 use execute::register_bytecode::{assembler::Assembler, vm::Vm, Instr, JmpMode};
 
+use crate::execute::register_bytecode::Address;
+
 // #![feature(test)]
 // mod bench;
 
@@ -24,7 +26,7 @@ fn main() {
 	   print(i);
 	*/
 	let mut assembler = Assembler::new();
-
+/*
 	assembler.add_instr(Instr::Clock(0));
 	assembler.add_instr(Instr::Load(1, 1));
 	assembler.add_instr(Instr::Load(4, 1000));
@@ -43,12 +45,46 @@ fn main() {
 	assembler.add_instr(Instr::Cmp(3, 4));
 	assembler.add_instr(Instr::Jlt(JmpMode::Absolute, 14));
 	assembler.add_instr(Instr::Halt);
+*/
+
+	// TODO: instructions that support literals, instead of relying on registers (e.g add, sub, mul, ...)
+
+	assembler.add_instr(Instr::Jmp(JmpMode::Absolute, 66));
+	// fn add
+	let add = assembler.add_instr(Instr::GetArg(0, 0));
+	assembler.add_instr(Instr::Load(1, 2));
+	assembler.add_instr(Instr::Cmp(0, 1));
+	assembler.add_instr(Instr::Jge(JmpMode::RelativeForward, 2));
+	assembler.add_instr(Instr::Ret(0));
+	assembler.add_instr(Instr::Load(2, 1));
+	assembler.add_instr(Instr::Sub { reg_1: 0, reg_2: 2, dst: 2 });
+	assembler.add_instr(Instr::Sub { reg_1: 0, reg_2: 1, dst: 1 });
+	assembler.add_instr(Instr::Push(2));
+	assembler.add_instr(Instr::Call(add as Address, 1));
+	assembler.add_instr(Instr::Pop(0));
+	assembler.add_instr(Instr::Push(1));
+	assembler.add_instr(Instr::Call(add as Address, 1));
+	assembler.add_instr(Instr::Pop(1));
+	assembler.add_instr(Instr::Add { reg_1: 0, reg_2: 1, dst: 0 });
+	assembler.add_instr(Instr::Ret(0));
+
+	assembler.add_instr(Instr::Load(0, 14));
+	assembler.add_instr(Instr::Push(0));
+	assembler.add_instr(Instr::Call(add as Address, 1));
+	assembler.add_instr(Instr::Pop(0));
+	assembler.add_instr(Instr::Print(0));
+	assembler.add_instr(Instr::Halt);
+
 
 	let program = assembler.program;
+
+	println!("{program:?}");
 
 	let mut vm = Vm::new(program);
 	vm.run();
 
-	println!("{:?}", vm.registers);
+	println!("{}", std::mem::size_of::<crate::execute::register_bytecode::StackValue>());
+
+	// println!("{:?}", vm.registers);
 	// println!("{:?}", unsafe {vm.registers[2].val.int });
 }
