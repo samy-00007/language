@@ -1,6 +1,8 @@
 #![allow(unused_unsafe)]
 #![allow(clippy::cast_lossless)]
-use super::{Address, JmpMode, Lit, Opcode, Reg, StackValue};
+use crate::utils::stack::Stack;
+
+use super::{Address, JmpMode, Lit, Opcode, Reg, StackValue, VmStack};
 use std::cmp::Ordering;
 
 macro_rules! read_bytes {
@@ -22,7 +24,7 @@ pub struct Vm {
 	cmp_reg: Ordering,
 	program: Program,
 	pc: usize,
-	stack: Vec<Register> //pc: *const u8,
+	stack: VmStack //pc: *const u8,
 	                     //start: *const u8
 }
 
@@ -34,7 +36,7 @@ impl Vm {
 			cmp_reg: Ordering::Equal,
 			program,
 			pc: 0,
-			stack: Vec::new() // pc: program.as_ptr(),
+			stack: VmStack::new() // pc: program.as_ptr(),
 			                  // start: program.as_ptr()
 		}
 	}
@@ -90,7 +92,7 @@ impl Vm {
 					self.pc = address as usize;
 				}
 				Opcode::Ret => {
-					let StackValue::Address(address) = (unsafe { self.stack.pop().unwrap() }) else {
+					let StackValue::Address(address) = (unsafe { self.stack.pop() }) else {
 						unreachable!()
 					};
 					self.pc = address as usize;
@@ -100,7 +102,7 @@ impl Vm {
 					self.stack.push(self.registers[reg]);
 				}
 				Opcode::Pop => {
-					let val = self.stack.pop().unwrap();
+					let val = self.stack.pop();
 					let reg = self.read_reg();
 					self.registers[reg] = val;
 				}
