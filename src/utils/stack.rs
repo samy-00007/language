@@ -7,6 +7,7 @@ pub trait Stack {
 	fn set(&mut self, i: usize, val: Self::Value);
 
 	fn last(&self) -> Self::Value;
+	fn last_mut(&mut self) -> &mut Self::Value;
 
 	fn reset(&mut self);
 

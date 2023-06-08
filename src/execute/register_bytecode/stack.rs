@@ -33,6 +33,10 @@ impl Stack for VmStack {
 		*self.stack.last().unwrap()
 	}
 
+	fn last_mut(&mut self) -> &mut Self::Value {
+		self.stack.last_mut().unwrap()
+	}
+
 	fn len(&self) -> usize {
 		self.stack.len()
 	}
