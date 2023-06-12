@@ -36,23 +36,21 @@ pub struct Vm {
 impl Vm {
 	pub fn new(program: Program) -> Self {
 		assert!(!program.is_empty());
-		Self {
+		let mut s = Self {
 			cmp_reg: Ordering::Equal,
 			program,
 			stack: VmStack::new(),
-			call_stack: CallStack::new(),
+			call_stack: CallStack::default(),
 			current_frame: std::ptr::null_mut() as *mut CallFrame
-		}
+		};
+		s.current_frame = s.call_stack.last_mut() as *mut _;
+		s.ensure_register_exists(10); // preallocate 10 registers, as of now, they are not allocated automatically
+		s
 	}
 
 	// maybe trait
-	pub fn run(&mut self) {
-		self.call_stack.init_pointers(1); // first call frame is the implicit main function
-		self.current_frame = self.call_stack.last_mut() as *mut _;
-		self.ensure_register_exists(10); // preallocate 10 registers, as of now, they are not allocated automatically
-
+	pub fn run(&mut self) {		
 		loop {
-			assert_eq!(self.call_stack.base, self.call_stack.stack.as_ptr());
 			// println!("frame: {:?}", unsafe { *self.current_frame });
 			// println!("{:?}", self.call_stack.len());
 			
