@@ -41,7 +41,7 @@ pub enum Opcode {
 	Ret,
 	Push,
 	Pop,
-	GetArg,
+	// GetArg,
 	Clock,
 	Print
 }
@@ -68,11 +68,11 @@ pub enum Instr {
 	Divl { reg_1: Reg, val: Lit, dst: Reg },
 	Cmp(Reg, Reg),
 	// u8: arg_count
-	Call(Address, u8),
-	Ret(Reg),
+	Call(Address, Reg, Reg), // inspired by lua: load reg_1 through reg_2 as args and jump to the func at address
+	Ret(Reg, Reg),
 	Push(Reg),
 	Pop(Reg),
-	GetArg(Reg, u8),
+	// GetArg(Reg, u8),
 	Clock(Reg),
 	Print(Reg)
 }
@@ -120,6 +120,7 @@ macro_rules! match_ops {
 	};
 }
 
+// GetArg; (reg, add_u8, Reg), (i, add_u8, u8)
 impl Instr {
 	match_ops![
 		Halt; 
@@ -132,13 +133,12 @@ impl Instr {
 		Jgt; (mode, add_u8, u8), (address, add_u16, Address);
 		Jge; (mode, add_u8, u8), (address, add_u16, Address);
 		Cmp; (reg_1, add_u8, Reg), (reg_2, add_u8, Reg);
-		Call; (address, add_u16, Address), (arg_count, add_u8, u8);
 		Clock; (reg, add_u8, Reg);
-		Ret; (reg, add_u8, Reg);
 		Push; (reg, add_u8, Reg);
 		Pop; (reg, add_u8, Reg);
 		Print; (reg, add_u8, Reg);
-		GetArg; (reg, add_u8, Reg), (i, add_u8, u8)
+		Call; (address, add_u16, Address), (reg_1, add_u8, Reg), (reg_2, add_u8, Reg);
+		Ret; (reg_1, add_u8, Reg), (reg_2, add_u8, Reg)
 		;;
 		Move; (src, add_u8, Reg), (dst, add_u8, Reg);
 		Add; (reg_1, add_u8, Reg), (reg_2, add_u8, Reg), (dst, add_u8, Reg);
@@ -156,7 +156,7 @@ impl Instr {
 		let mut n = 1; // opcode
 		let to_add = match self {
 			Self::Load(_, _) => Reg::BITS + Lit::BITS,
-			Self::Move { src: _, dst: _ } | Self::Cmp(_, _) => 2 * Reg::BITS,
+			Self::Move { src: _, dst: _ } | Self::Cmp(_, _) | Self::Ret(_, _) => 2 * Reg::BITS,
 			Self::Jge(_, _) | Self::Jgt(_, _) | Self::Jle(_, _) | Self::Jmp(_, _) => {
 				std::mem::size_of::<JmpMode>() as u32 * 8 + Address::BITS
 			}
@@ -180,9 +180,9 @@ impl Instr {
 				reg_2: _,
 				dst: _
 			} => 3 * Reg::BITS,
-			Self::Call(_, _) => Address::BITS + u8::BITS,
-			Self::Clock(_) | Self::Pop(_) | Self::Push(_) | Self::Ret(_) => Reg::BITS,
-			Self::GetArg(_, _) => Reg::BITS + u8::BITS,
+			Self::Call(_, _, _) => Address::BITS + 2 * Reg::BITS,
+			Self::Clock(_) | Self::Pop(_) | Self::Push(_) => Reg::BITS,
+			// Self::GetArg(_, _) => Reg::BITS + u8::BITS,
 			_ => 0
 		};
 		assert!(to_add % 8 == 0);
