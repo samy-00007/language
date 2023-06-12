@@ -1,16 +1,19 @@
-#![allow(unused_unsafe)]
 #![allow(clippy::cast_lossless)]
+#![allow(clippy::pedantic)]
 use crate::utils::stack::Stack;
 
-use super::{Address, JmpMode, Lit, Opcode, Reg, StackValue, VmStack, callstack::{CallStack, CallFrame, CALL_STACK_SIZE, REGISTER_COUNT}};
+use super::{
+	callstack::{CallFrame, CallStack, CALL_STACK_SIZE},
+	Address, JmpMode, Lit, Opcode, Reg, StackValue, VmStack
+};
 use std::cmp::Ordering;
 
 macro_rules! read_bytes {
 	($name:ident, $t:tt, $s:literal) => {
 		#[allow(dead_code)]
 		fn $name(&mut self) -> $t {
-			let bytes = &self.program[self.pc..(self.pc + $s)];
-			self.pc += $s;
+			let bytes = &self.program[self.pc()..(self.pc() + $s)];
+			unsafe { (*self.current_frame).pc += $s };
 			$t::from_le_bytes(bytes.try_into().unwrap())
 		}
 	};
@@ -19,12 +22,13 @@ macro_rules! read_bytes {
 type Program = Vec<u8>;
 pub type Register = StackValue;
 
+#[derive(Debug)]
 pub struct Vm {
 	cmp_reg: Ordering,
 	program: Program,
-	pc: usize,
 	stack: VmStack,
-	call_stack: CallStack<CALL_STACK_SIZE, REGISTER_COUNT>
+	call_stack: CallStack<CALL_STACK_SIZE>,
+	current_frame: *mut CallFrame
 }
 //pc: *const u8,
 //start: *const u8
@@ -35,23 +39,34 @@ impl Vm {
 		Self {
 			cmp_reg: Ordering::Equal,
 			program,
-			pc: 0,
 			stack: VmStack::new(),
-			call_stack: CallStack::new()
+			call_stack: CallStack::new(),
+			current_frame: std::ptr::null_mut() as *mut CallFrame
 		}
 	}
 
 	// maybe trait
 	pub fn run(&mut self) {
+		self.call_stack.init_pointers(1); // first call frame is the implicit main function
+		self.current_frame = self.call_stack.last_mut() as *mut _;
+		self.ensure_register_exists(10); // preallocate 10 registers, as of now, they are not allocated automatically
+
 		loop {
-			let op = std::ptr::addr_of!(self.program[self.pc]);
+			assert_eq!(self.call_stack.base, self.call_stack.stack.as_ptr());
+			// println!("frame: {:?}", unsafe { *self.current_frame });
+			// println!("{:?}", self.call_stack.len());
+			
+			let op = std::ptr::addr_of!(self.program[self.pc()]);
 			let op = unsafe { op.cast::<Opcode>().read_unaligned() };
 
-			// println!("{:?}", self.program);
-			// println!("{op:?}");
-			// println!("{}\n", self.pc);
 
-			self.pc += 1;
+			// println!("{:?}", self.call_stack.last());
+
+			// println!("{:?}", self.program);
+			// println!("{op:?}\n");
+			// println!("{}\n", self.pc());
+
+			unsafe { (*self.current_frame).pc += 1 };
 			match op {
 				Opcode::Halt => break,
 				Opcode::Nop => {}
@@ -89,24 +104,49 @@ impl Vm {
 					let since_the_epoch = now
 						.duration_since(std::time::UNIX_EPOCH)
 						.expect("Time went backwards");
-					#[allow(clippy::cast_possible_wrap)]
 					let ms = since_the_epoch.as_millis() as Lit;
 					let reg = self.read_reg();
 					self.set_register(reg, Register::Int(ms));
 				}
 				Opcode::Call => {
 					let address = self.read_address();
-					let arg_count = self.read_u8() as usize;
-					self.call_stack.push(CallFrame::new(self.pc, arg_count, self.stack.len() - arg_count));
-					self.pc = address as usize;
+					let reg_1 = self.read_reg();
+					let reg_2 = self.read_reg();
+
+					assert!(reg_2 >= reg_1);
+					
+					let base = unsafe { (*self.current_frame).reg0_p }; // TODO: put that in a function
+
+					let arg_count = (reg_2 - reg_1) as usize;
+					let frame = CallFrame::new(address as usize, arg_count, self.stack.len(), reg_1);
+					self.call_stack.push(frame);
+					self.update_current_frame();
+
+					let to_add = vec![Register::zero(); arg_count + 5]; // preallocate argcount + 5 registers for the function
+					self.stack.append(&to_add);
+					
+					for i in 0..(reg_2 - reg_1) {
+						let val = self.raw_get_register(base, reg_1 + i);
+						self.set_register(i, val);
+					}
 				}
 				Opcode::Ret => {
-					let reg = self.read_reg();
-					let ret_value = self.get_register(reg);
-					self.stack.push(ret_value);
+					let reg_1 = self.read_reg();
+					let reg_2 = self.read_reg();
+					
+					assert!(reg_2 >= reg_1);
 
-					let callframe = self.call_stack.pop();
-					self.pc = callframe.ret_pc;
+					let frame = self.call_stack.pop();
+					self.update_current_frame();
+					let base = frame.reg0_p;
+					let ret_reg = frame.ret_reg;
+					
+					for i in 0..(reg_2 - reg_1) {
+						let val = self.raw_get_register(base, reg_1 + i);
+						self.set_register(ret_reg + i, val);
+					}
+					self.stack.remove(self.stack.len() - base);
+
 				}
 				Opcode::Push => {
 					let reg = self.read_reg();
@@ -116,16 +156,6 @@ impl Vm {
 					let val = self.stack.pop();
 					let reg = self.read_reg();
 					// println!("[Pop] val: ({val:?}), reg: {reg}");
-					self.set_register(reg, val);
-				}
-				Opcode::GetArg => {
-					let reg = self.read_reg();
-					let i = self.read_u8() as usize;
-					let frame = self.call_stack.last();
-					let val = self.stack.get(frame.arg0_i + i);
-
-					// println!("[GetArg] val: ({val:?}), reg: {reg}");
-
 					self.set_register(reg, val);
 				}
 				Opcode::Print => {
@@ -138,15 +168,40 @@ impl Vm {
 	}
 
 	#[inline]
+	fn pc(&self) -> usize {
+		(unsafe { *self.current_frame }).pc
+	}
+
+	fn update_current_frame(&mut self) {
+		self.current_frame = self.call_stack.last_mut() as *mut CallFrame;
+	}
+
+	fn ensure_register_exists(&mut self, reg: usize) {
+		// if std::intrinsics::unlikely(reg + 1 > self.stack.len()) {
+		if reg + 1 > self.stack.len() {
+			for _ in 0..(reg + 1 - self.stack.len()) { // janky
+				self.stack.push(Register::zero());
+			}
+		}
+	}
+	
 	fn get_register(&self, reg: Reg) -> Register {
-		let frame = self.call_stack.last();
-		frame.registers[reg as usize]
+		let base = (unsafe { *self.current_frame }).reg0_p;
+		self.raw_get_register(base, reg)
 	}
 
 	#[inline]
+	fn raw_get_register(&self, base: usize, reg: Reg) -> Register {
+		self.stack.get(base + reg as usize)
+	}
+
+	
 	fn set_register(&mut self, reg: Reg, val: Register) {
-		let mut frame = self.call_stack.last_mut();
-		frame.registers[reg as usize] = val;
+		let base = (unsafe { *self.current_frame }).reg0_p;
+		let reg = base + reg as usize;
+		
+		self.ensure_register_exists(reg);
+		self.stack.set(reg, val);
 	}
 
 	#[inline(always)]
@@ -157,7 +212,7 @@ impl Vm {
 
 		self.set_register(dst, op(self.get_register(reg_1), self.get_register(reg_2))); // TODO: handle overflow
 	}
-	
+
 	#[inline(always)]
 	fn op_lit(&mut self, op: fn(Register, Register) -> Register) {
 		let reg_1 = self.read_reg();
@@ -172,13 +227,14 @@ impl Vm {
 		let mode = self.read_u8();
 		let mode = std::ptr::addr_of!(mode);
 		let mode = unsafe { mode.cast::<JmpMode>().read_unaligned() };
-
 		let address = self.read_address();
 		if cond(self.cmp_reg) {
 			match mode {
-				JmpMode::Absolute => self.pc = address as usize,
-				JmpMode::RelativeBackward => self.pc -= address as usize,
-				JmpMode::RelativeForward => self.pc += address as usize
+				JmpMode::Absolute => unsafe { (*self.current_frame).pc = address as usize },
+				JmpMode::RelativeBackward => unsafe {
+					(*self.current_frame).pc -= address as usize
+				},
+				JmpMode::RelativeForward => unsafe { (*self.current_frame).pc += address as usize }
 			}
 		}
 	}
@@ -203,8 +259,8 @@ impl Vm {
 
 	#[inline]
 	fn read_u8(&mut self) -> u8 {
-		self.pc += 1;
-		self.program[self.pc - 1]
+		unsafe { (*self.current_frame).pc += 1 };
+		*self.program.get(self.pc() - 1).unwrap()
 	}
 
 	read_bytes!(read_u16, u16, 2);
