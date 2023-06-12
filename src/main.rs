@@ -26,7 +26,7 @@ fn main() {
 	   print(i);
 	*/
 	let mut assembler = Assembler::new();
-/*
+
 	assembler.add_instr(Instr::Clock(0));
 	assembler.add_instr(Instr::Load(1, 1));
 	assembler.add_instr(Instr::Load(4, 1000));
@@ -46,11 +46,11 @@ fn main() {
 	assembler.add_instr(Instr::Jlt(JmpMode::Absolute, add as Address));
 	assembler.add_instr(Instr::Print(2));
 	assembler.add_instr(Instr::Halt);
-*/
+
 
 	// TODO: higher level instr
 
-	assembler.add_instr(Instr::Jmp(JmpMode::Absolute, 63));
+	/*assembler.add_instr(Instr::Jmp(JmpMode::Absolute, 63));
 	// fn add
 	let add = assembler.add_instr(Instr::Load(1, 2));
 	assembler.add_instr(Instr::Cmp(0, 1));
@@ -66,7 +66,7 @@ fn main() {
 	println!("{}", assembler.add_instr(Instr::Load(0, 14)));
 	assembler.add_instr(Instr::Call(add as Address, 0, 1));
 	assembler.add_instr(Instr::Print(0));
-	assembler.add_instr(Instr::Halt);
+	assembler.add_instr(Instr::Halt);*/
 
 /*
 	fn fibonacci(n: number) -> number  {
