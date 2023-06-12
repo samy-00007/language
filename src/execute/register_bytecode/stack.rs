@@ -6,12 +6,17 @@ use std::{
 	ops::{Add, Div, Mul, Sub}
 };
 
+#[derive(Debug)]
 pub struct VmStack {
 	stack: Vec<StackValue>
 }
 
-impl Stack for VmStack {
+impl Stack for VmStack { // TODO: do i really need a Stack trait since i don't use slices ?
 	type Value = StackValue;
+
+	fn append(&mut self, other: &[Self::Value]) {
+		self.stack.append(&mut other.to_vec());
+	}
 
 	fn push(&mut self, val: Self::Value) {
 		self.stack.push(val);
@@ -21,8 +26,12 @@ impl Stack for VmStack {
 		self.stack.pop().unwrap()
 	}
 
-	fn get(&mut self, i: usize) -> Self::Value {
+	fn get(&self, i: usize) -> Self::Value {
 		*self.stack.get(i).unwrap()
+	}
+
+	fn get_mut(&mut self, i: usize) -> &mut Self::Value {
+		self.stack.get_mut(i).unwrap()
 	}
 
 	fn set(&mut self, i: usize, val: Self::Value) {
@@ -41,13 +50,17 @@ impl Stack for VmStack {
 		self.stack.len()
 	}
 
+	fn remove(&mut self, n: usize) {
+		self.stack.truncate(self.len() - n);
+	}
+
 	fn reset(&mut self) {
 		self.stack.clear();
 	}
 }
 
 impl VmStack {
-	pub fn new() -> Self {
+	pub const fn new() -> Self {
 		Self { stack: Vec::new() }
 	}
 }
@@ -104,6 +117,10 @@ impl StackValue {
 			},
 			_ => unreachable!()
 		}
+	}
+
+	pub const fn zero() -> Self {
+		Self::Int(0)
 	}
 }
 
