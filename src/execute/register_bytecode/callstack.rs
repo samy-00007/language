@@ -2,19 +2,19 @@ use crate::utils::stack::Stack;
 
 use super::vm::Register;
 
-const CALL_STACK_SIZE: usize = 256;
-const REGISTER_COUNT: usize = 256;
+pub const CALL_STACK_SIZE: usize = 256;
+pub const REGISTER_COUNT: usize = 256;
 
-pub struct CallStack {
-	stack: [CallFrame; CALL_STACK_SIZE],
+pub struct CallStack<const N: usize, const B: usize> {
+	stack: [CallFrame<B>; N],
 	pc: usize
 }
 
-impl Stack for CallStack {
-	type Value = CallFrame;
+impl<const N: usize, const B: usize> Stack for CallStack<N, B> {
+	type Value = CallFrame<B>;
 
 	fn push(&mut self, val: Self::Value) {
-		assert!(self.pc < CALL_STACK_SIZE - 1);
+		assert!(self.pc < N - 1);
 		self.stack[self.pc] = val;
 		self.pc += 1;
 	}
@@ -26,12 +26,12 @@ impl Stack for CallStack {
 	}
 
 	fn get(&mut self, i: usize) -> Self::Value {
-		assert!(i < CALL_STACK_SIZE);
+		assert!(i < N);
 		*self.stack.get(i).unwrap()
 	}
 
 	fn set(&mut self, i: usize, val: Self::Value) {
-		assert!(i < CALL_STACK_SIZE);
+		assert!(i < N);
 		*self.stack.get_mut(i).unwrap() = val;
 	}
 
@@ -52,28 +52,28 @@ impl Stack for CallStack {
 	}
 }
 
-impl CallStack {
+impl<const N: usize, const B: usize> CallStack<N, B> {
 	pub const fn new() -> Self {
-		Self { stack: [CallFrame::empty(); CALL_STACK_SIZE], pc: 1 }
+		Self { stack: [CallFrame::<B>::empty(); N], pc: 1 }
 	}
 }
 
 
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct CallFrame {
+pub struct CallFrame<const N: usize> {
 	pub ret_pc: usize,
 	pub arg_count: usize,
 	pub arg0_i: usize,
-	pub registers: [Register; REGISTER_COUNT]
+	pub registers: [Register; N]
 }
 
-impl CallFrame {
+impl<const N: usize> CallFrame<N> {
 	pub const fn new(ret_pc: usize, arg_count: usize, arg0_i: usize) -> Self {
-		Self { ret_pc, arg_count, arg0_i, registers: [Register::Int(0); REGISTER_COUNT] }
+		Self { ret_pc, arg_count, arg0_i, registers: [Register::Int(0); N] }
 	}
 	
 	pub const fn empty() -> Self {
-		Self { ret_pc: 0, arg_count: 0, arg0_i: 0, registers: [Register::Int(0); REGISTER_COUNT] }
+		Self { ret_pc: 0, arg_count: 0, arg0_i: 0, registers: [Register::Int(0); N] }
 	}
 }

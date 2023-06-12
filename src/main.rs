@@ -47,7 +47,7 @@ fn main() {
 	assembler.add_instr(Instr::Halt);
 */
 
-	// TODO: pass floats to instr
+	// TODO: higher level instr
 
 	assembler.add_instr(Instr::Jmp(JmpMode::Absolute, 70));
 	// fn add
@@ -86,6 +86,8 @@ fn main() {
 	let a = fibonacci(14);
 	print(a)
  */
+
+// core::intrinsics::unlikely
 
 	let program = assembler.program;
 

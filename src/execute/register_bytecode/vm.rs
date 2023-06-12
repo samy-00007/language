@@ -2,7 +2,7 @@
 #![allow(clippy::cast_lossless)]
 use crate::utils::stack::Stack;
 
-use super::{Address, JmpMode, Lit, Opcode, Reg, StackValue, VmStack, callstack::{CallStack, CallFrame}};
+use super::{Address, JmpMode, Lit, Opcode, Reg, StackValue, VmStack, callstack::{CallStack, CallFrame, CALL_STACK_SIZE, REGISTER_COUNT}};
 use std::cmp::Ordering;
 
 macro_rules! read_bytes {
@@ -24,7 +24,7 @@ pub struct Vm {
 	program: Program,
 	pc: usize,
 	stack: VmStack,
-	call_stack: CallStack
+	call_stack: CallStack<CALL_STACK_SIZE, REGISTER_COUNT>
 }
 //pc: *const u8,
 //start: *const u8
