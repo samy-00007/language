@@ -68,12 +68,10 @@ pub enum Instr {
 	Mull { reg_1: Reg, val: Lit, dst: Reg },
 	Divl { reg_1: Reg, val: Lit, dst: Reg },
 	Cmp(Reg, Reg),
-	// u8: arg_count
 	Call(u16, Reg, Reg), // inspired by lua: load reg_1 through reg_2 as args and jump to the func at "id"
 	Ret(Reg, Reg),
 	Push(Reg),
 	Pop(Reg),
-	// GetArg(Reg, u8),
 	Clock(Reg),
 	Print(Reg)
 }
