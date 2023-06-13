@@ -1,7 +1,7 @@
 #![allow(clippy::pedantic)]
 
 use crate::utils::stack::Stack;
-use std::ptr::null_mut;
+use std::ptr::{null_mut, null};
 
 use super::Reg;
 
@@ -97,19 +97,46 @@ impl<const N: usize> Default for CallStack<N> {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CallFrame {
-	pub pc: usize,
+	pub base: *const u8,
+	pub pc: *const u8,
 	pub arg_count: usize,
 	pub reg0_p: usize,
-	pub ret_reg: Reg
+	pub ret_reg: Reg,
 }
 
 impl CallFrame {
-	pub const fn new(pc: usize, arg_count: usize, reg0_p: usize, ret_reg: u8) -> Self {
-		Self { pc, arg_count, reg0_p, ret_reg }
+	pub const fn new(pc: *const u8, arg_count: usize, reg0_p: usize, ret_reg: u8) -> Self {
+		Self { base: pc, pc, arg_count, reg0_p, ret_reg }
 	}
 	
 	pub const fn empty() -> Self {
-		Self { pc: 0, arg_count: 0, reg0_p: 0, ret_reg: 0 }
+		Self { base: null(), pc: null(), arg_count: 0, reg0_p: 0, ret_reg: 0 }
+	}
+
+
+	#[inline]
+	pub unsafe fn pc(&self) -> usize {
+		self.pc.offset_from(self.base) as usize
+	}
+
+	#[inline(always)]
+	pub unsafe fn increment_pc(&mut self) {
+		self.add_to_pc(1);
+	}
+	
+	#[inline(always)]
+	pub unsafe fn add_to_pc(&mut self, count: usize) {
+		self.pc = self.pc.add(count);
+	}
+	
+	#[inline(always)]
+	pub unsafe fn remove_from_pc(&mut self, count: usize) {
+		self.pc = self.pc.sub(count);
+	}
+
+	#[inline(always)]
+	pub unsafe fn set_pc(&mut self, count: usize) {
+		self.pc = self.base.add(count);
 	}
 }
 

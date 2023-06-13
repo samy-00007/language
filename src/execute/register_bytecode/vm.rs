@@ -4,7 +4,8 @@ use crate::utils::stack::Stack;
 
 use super::{
 	callstack::{CallFrame, CallStack, CALL_STACK_SIZE},
-	Address, JmpMode, Lit, Opcode, Reg, StackValue, VmStack
+	Address, JmpMode, Lit, Opcode, Reg, StackValue, VmStack, program::Program,
+	//program::Program
 };
 use std::cmp::Ordering;
 
@@ -12,14 +13,13 @@ macro_rules! read_bytes {
 	($name:ident, $t:tt, $s:literal) => {
 		#[allow(dead_code)]
 		fn $name(&mut self) -> $t {
-			let bytes = &self.program[self.pc()..(self.pc() + $s)];
-			unsafe { (*self.current_frame).pc += $s };
+			let bytes = unsafe { std::slice::from_raw_parts(self.pc(), $s) };
+			self.add_to_pc($s);
 			$t::from_le_bytes(bytes.try_into().unwrap())
 		}
 	};
 }
 
-type Program = Vec<u8>;
 pub type Register = StackValue;
 
 #[derive(Debug)]
@@ -28,43 +28,39 @@ pub struct Vm {
 	program: Program,
 	stack: VmStack,
 	call_stack: CallStack<CALL_STACK_SIZE>,
-	current_frame: *mut CallFrame
+	current_frame: *mut CallFrame,
 }
-//pc: *const u8,
-//start: *const u8
 
 impl Vm {
 	pub fn new(program: Program) -> Self {
-		assert!(!program.is_empty());
+		assert!(!program.code.is_empty());
 		let mut s = Self {
 			cmp_reg: Ordering::Equal,
 			program,
 			stack: VmStack::new(),
 			call_stack: CallStack::default(),
-			current_frame: std::ptr::null_mut() as *mut CallFrame
+			current_frame: std::ptr::null_mut() as *mut CallFrame,
 		};
 		s.current_frame = s.call_stack.last_mut() as *mut _;
+		unsafe {
+			(*s.current_frame).pc = s.program.code.as_ptr();
+			(*s.current_frame).base = s.program.code.as_ptr();
+		}
 		s.ensure_register_exists(10); // preallocate 10 registers, as of now, they are not allocated automatically
 		s
 	}
 
 	// maybe trait
 	pub fn run(&mut self) {		
-		loop {
-			// println!("frame: {:?}", unsafe { *self.current_frame });
-			// println!("{:?}", self.call_stack.len());
-			
-			let op = std::ptr::addr_of!(self.program[self.pc()]);
+		loop {			
+			let op = self.pc();
 			let op = unsafe { op.cast::<Opcode>().read_unaligned() };
-
-
-			// println!("{:?}", self.call_stack.last());
 
 			// println!("{:?}", self.program);
 			// println!("{op:?}\n");
 			// println!("{}\n", self.pc());
 
-			unsafe { (*self.current_frame).pc += 1 };
+			self.increment_pc();
 			match op {
 				Opcode::Halt => break,
 				Opcode::Nop => {}
@@ -107,7 +103,7 @@ impl Vm {
 					self.set_register(reg, Register::Int(ms));
 				}
 				Opcode::Call => {
-					let address = self.read_address();
+					let id = self.read_u16() as usize;
 					let reg_1 = self.read_reg();
 					let reg_2 = self.read_reg();
 
@@ -116,7 +112,10 @@ impl Vm {
 					let base = unsafe { (*self.current_frame).reg0_p }; // TODO: put that in a function
 
 					let arg_count = (reg_2 - reg_1) as usize;
-					let frame = CallFrame::new(address as usize, arg_count, self.stack.len(), reg_1);
+
+					let func = self.program.functions[id].code.as_ptr();
+
+					let frame = CallFrame::new(func, arg_count, self.stack.len(), reg_1);
 					self.call_stack.push(frame);
 					self.update_current_frame();
 
@@ -165,21 +164,15 @@ impl Vm {
 		}
 	}
 
-	#[inline]
-	fn pc(&self) -> usize {
-		(unsafe { *self.current_frame }).pc
-	}
-
 	fn update_current_frame(&mut self) {
 		self.current_frame = self.call_stack.last_mut() as *mut CallFrame;
 	}
 
 	fn ensure_register_exists(&mut self, reg: usize) {
-		// if std::intrinsics::unlikely(reg + 1 > self.stack.len()) {
 		if reg + 1 > self.stack.len() {
-			for _ in 0..(reg + 1 - self.stack.len()) { // janky
-				self.stack.push(Register::zero());
-			}
+			let to_add = reg + 1 - self.stack.len();
+			let to_add = vec![Register::zero(); to_add];
+			self.stack.append(&to_add);
 		}
 	}
 	
@@ -228,11 +221,9 @@ impl Vm {
 		let address = self.read_address();
 		if cond(self.cmp_reg) {
 			match mode {
-				JmpMode::Absolute => unsafe { (*self.current_frame).pc = address as usize },
-				JmpMode::RelativeBackward => unsafe {
-					(*self.current_frame).pc -= address as usize
-				},
-				JmpMode::RelativeForward => unsafe { (*self.current_frame).pc += address as usize }
+				JmpMode::Absolute => self.set_pc(address as usize),
+				JmpMode::RelativeBackward => self.remove_from_pc(address as usize),
+				JmpMode::RelativeForward => self.add_to_pc(address as usize)
 			}
 		}
 	}
@@ -257,8 +248,44 @@ impl Vm {
 
 	#[inline]
 	fn read_u8(&mut self) -> u8 {
-		unsafe { (*self.current_frame).pc += 1 };
-		*self.program.get(self.pc() - 1).unwrap()
+		let v = unsafe { *self.pc() };
+		self.increment_pc();
+		v
+	}
+
+	#[inline]
+	fn pc(&self) -> *const u8 {
+		unsafe { 
+			(*self.current_frame).pc
+		}
+	}
+
+	#[inline(always)]
+	fn increment_pc(&mut self) {
+		unsafe {
+			(*self.current_frame).increment_pc();
+		}
+	}
+	
+	#[inline(always)]
+	fn add_to_pc(&mut self, count: usize) {
+		unsafe {
+			(*self.current_frame).add_to_pc(count)
+		}
+	}
+	
+	#[inline(always)]
+	fn remove_from_pc(&mut self, count: usize) {
+		unsafe {
+			(*self.current_frame).remove_from_pc(count)
+		}
+	}
+
+	#[inline(always)]
+	fn set_pc(&mut self, count: usize) {
+		unsafe {
+			(*self.current_frame).set_pc(count)
+		}
 	}
 
 	read_bytes!(read_u16, u16, 2);
