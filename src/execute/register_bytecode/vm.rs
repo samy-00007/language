@@ -191,7 +191,7 @@ impl Vm {
 		let base = (unsafe { *self.current_frame }).reg0_p;
 		let reg = base + reg as usize;
 		
-		self.ensure_register_exists(reg);
+		self.ensure_register_exists(reg); // TODO: remove that
 		self.stack.set(reg, val);
 	}
 
