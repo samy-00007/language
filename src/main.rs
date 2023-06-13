@@ -46,10 +46,9 @@ fn main() {
 	assembler.add_instr(Instr::Jlt(JmpMode::Absolute, add as Address));
 	assembler.add_instr(Instr::Print(2));
 	assembler.add_instr(Instr::Halt);
-	
 
 	// TODO: higher level instr
-	
+
 	/*let mut func = Assembler::new();
 	func.add_instr(Instr::Load(1, 2));
 	func.add_instr(Instr::Cmp(0, 1));
@@ -68,36 +67,36 @@ fn main() {
 	assembler.add_instr(Instr::Print(0));
 	assembler.add_instr(Instr::Halt);*/
 
-/*
-	fn fibonacci(n: number) -> number  {
-		if n < 2 {
-			n
-		} else {
-			fibonacci(n - 1) + fibonacci(n - 2)
-		}
-	}
+	/*
+	   fn fibonacci(n: number) -> number  {
+		   if n < 2 {
+			   n
+		   } else {
+			   fibonacci(n - 1) + fibonacci(n - 2)
+		   }
+	   }
 
-	fn fibonacci_(n: number) -> number {
-		let a: number = 0;
-		let b: number = 1;
+	   fn fibonacci_(n: number) -> number {
+		   let a: number = 0;
+		   let b: number = 1;
 
-		if n < 2 {
-			return n
-		}
+		   if n < 2 {
+			   return n
+		   }
 
-		for _ in 0..n {
-			let _b = b;
-			b = a + b;
-			a = _b;
-		}
-		b
-	}
+		   for _ in 0..n {
+			   let _b = b;
+			   b = a + b;
+			   a = _b;
+		   }
+		   b
+	   }
 
-	let a = fibonacci(14);
-	print(a)
- */
+	   let a = fibonacci(14);
+	   print(a)
+	*/
 
-// core::intrinsics::unlikely
+	// core::intrinsics::unlikely
 
 	let program = assembler.program;
 
@@ -106,12 +105,10 @@ fn main() {
 	let mut vm = Vm::new(program);
 	vm.run();
 
-
 	// println!("{:?}", vm.registers);
 	// println!("{:?}", unsafe {vm.registers[2].val.int });
 }
 
-
 /*
-	TODO: optimize everything (lexer, parser, ...)
- */
+   TODO: optimize everything (lexer, parser, ...)
+*/

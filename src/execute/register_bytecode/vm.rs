@@ -4,8 +4,15 @@ use crate::utils::stack::Stack;
 
 use super::{
 	callstack::{CallFrame, CallStack, CALL_STACK_SIZE},
-	Address, JmpMode, Lit, Opcode, Reg, StackValue, VmStack, program::Program,
+	program::Program,
 	//program::Program
+	Address,
+	JmpMode,
+	Lit,
+	Opcode,
+	Reg,
+	StackValue,
+	VmStack
 };
 use std::cmp::Ordering;
 
@@ -28,7 +35,7 @@ pub struct Vm {
 	program: Program,
 	stack: VmStack,
 	call_stack: CallStack<CALL_STACK_SIZE>,
-	current_frame: *mut CallFrame,
+	current_frame: *mut CallFrame
 }
 
 impl Vm {
@@ -39,7 +46,7 @@ impl Vm {
 			program,
 			stack: VmStack::new(),
 			call_stack: CallStack::default(),
-			current_frame: std::ptr::null_mut() as *mut CallFrame,
+			current_frame: std::ptr::null_mut() as *mut CallFrame
 		};
 		s.current_frame = s.call_stack.last_mut() as *mut _;
 		unsafe {
@@ -51,8 +58,8 @@ impl Vm {
 	}
 
 	// maybe trait
-	pub fn run(&mut self) {		
-		loop {			
+	pub fn run(&mut self) {
+		loop {
 			let op = self.pc();
 			let op = unsafe { op.cast::<Opcode>().read_unaligned() };
 
@@ -108,7 +115,7 @@ impl Vm {
 					let reg_2 = self.read_reg();
 
 					assert!(reg_2 >= reg_1);
-					
+
 					let base = unsafe { (*self.current_frame).reg0_p }; // TODO: put that in a function
 
 					let arg_count = (reg_2 - reg_1) as usize;
@@ -121,7 +128,7 @@ impl Vm {
 
 					let to_add = vec![Register::zero(); arg_count + 5]; // preallocate argcount + 5 registers for the function
 					self.stack.append(&to_add);
-					
+
 					for i in 0..(reg_2 - reg_1) {
 						let val = self.raw_get_register(base, reg_1 + i);
 						self.set_register(i, val);
@@ -130,20 +137,19 @@ impl Vm {
 				Opcode::Ret => {
 					let reg_1 = self.read_reg();
 					let reg_2 = self.read_reg();
-					
+
 					assert!(reg_2 >= reg_1);
 
 					let frame = self.call_stack.pop();
 					self.update_current_frame();
 					let base = frame.reg0_p;
 					let ret_reg = frame.ret_reg;
-					
+
 					for i in 0..(reg_2 - reg_1) {
 						let val = self.raw_get_register(base, reg_1 + i);
 						self.set_register(ret_reg + i, val);
 					}
 					self.stack.remove(self.stack.len() - base);
-
 				}
 				Opcode::Push => {
 					let reg = self.read_reg();
@@ -175,7 +181,7 @@ impl Vm {
 			self.stack.append(&to_add);
 		}
 	}
-	
+
 	fn get_register(&self, reg: Reg) -> Register {
 		let base = (unsafe { *self.current_frame }).reg0_p;
 		self.raw_get_register(base, reg)
@@ -186,11 +192,10 @@ impl Vm {
 		self.stack.get(base + reg as usize)
 	}
 
-	
 	fn set_register(&mut self, reg: Reg, val: Register) {
 		let base = (unsafe { *self.current_frame }).reg0_p;
 		let reg = base + reg as usize;
-		
+
 		self.ensure_register_exists(reg); // TODO: remove that
 		self.stack.set(reg, val);
 	}
@@ -255,9 +260,7 @@ impl Vm {
 
 	#[inline]
 	fn pc(&self) -> *const u8 {
-		unsafe { 
-			(*self.current_frame).pc
-		}
+		unsafe { (*self.current_frame).pc }
 	}
 
 	#[inline(always)]
@@ -266,26 +269,20 @@ impl Vm {
 			(*self.current_frame).increment_pc();
 		}
 	}
-	
+
 	#[inline(always)]
 	fn add_to_pc(&mut self, count: usize) {
-		unsafe {
-			(*self.current_frame).add_to_pc(count)
-		}
+		unsafe { (*self.current_frame).add_to_pc(count) }
 	}
-	
+
 	#[inline(always)]
 	fn remove_from_pc(&mut self, count: usize) {
-		unsafe {
-			(*self.current_frame).remove_from_pc(count)
-		}
+		unsafe { (*self.current_frame).remove_from_pc(count) }
 	}
 
 	#[inline(always)]
 	fn set_pc(&mut self, count: usize) {
-		unsafe {
-			(*self.current_frame).set_pc(count)
-		}
+		unsafe { (*self.current_frame).set_pc(count) }
 	}
 
 	read_bytes!(read_u16, u16, 2);

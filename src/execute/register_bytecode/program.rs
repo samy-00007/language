@@ -6,7 +6,10 @@ pub struct Program {
 
 impl Program {
 	pub fn new() -> Self {
-		Self { code: Vec::new(), functions: Vec::new() }
+		Self {
+			code: Vec::new(),
+			functions: Vec::new()
+		}
 	}
 }
 

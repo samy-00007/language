@@ -11,7 +11,8 @@ pub struct VmStack {
 	stack: Vec<StackValue>
 }
 
-impl Stack for VmStack { // TODO: do i really need a Stack trait since i don't use slices ?
+impl Stack for VmStack {
+	// TODO: do i really need a Stack trait since i don't use slices ?
 	type Value = StackValue;
 
 	fn append(&mut self, other: &[Self::Value]) {

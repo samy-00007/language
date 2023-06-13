@@ -1,4 +1,4 @@
-use super::{Instr, program::Program};
+use super::{program::Program, Instr};
 
 macro_rules! add_n {
 	($n:ident, $t:ty) => {

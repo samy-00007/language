@@ -1,9 +1,9 @@
 pub mod assembler;
 mod callstack;
 pub mod compiler;
+pub mod program;
 mod stack;
 pub mod vm;
-pub mod program;
 
 pub use stack::*;
 
@@ -85,7 +85,6 @@ pub enum JmpMode {
 	RelativeBackward
 }
 
-
 macro_rules! match_ops {
 	[
 		$($name_1:ident);* ;;
@@ -124,8 +123,8 @@ macro_rules! match_ops {
 // GetArg; (reg, add_u8, Reg), (i, add_u8, u8)
 impl Instr {
 	match_ops![
-		Halt; 
-		Nop 
+		Halt;
+		Nop
 		;;
 		Load; (reg, add_u8, u8), (value, add_i64, Lit);
 		Jmp; (mode, add_u8, u8), (address, add_u16, Address);
