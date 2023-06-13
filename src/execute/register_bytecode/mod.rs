@@ -3,6 +3,7 @@ mod callstack;
 pub mod compiler;
 mod stack;
 pub mod vm;
+pub mod program;
 
 pub use stack::*;
 
@@ -68,7 +69,7 @@ pub enum Instr {
 	Divl { reg_1: Reg, val: Lit, dst: Reg },
 	Cmp(Reg, Reg),
 	// u8: arg_count
-	Call(Address, Reg, Reg), // inspired by lua: load reg_1 through reg_2 as args and jump to the func at address
+	Call(u16, Reg, Reg), // inspired by lua: load reg_1 through reg_2 as args and jump to the func at "id"
 	Ret(Reg, Reg),
 	Push(Reg),
 	Pop(Reg),
@@ -137,7 +138,7 @@ impl Instr {
 		Push; (reg, add_u8, Reg);
 		Pop; (reg, add_u8, Reg);
 		Print; (reg, add_u8, Reg);
-		Call; (address, add_u16, Address), (reg_1, add_u8, Reg), (reg_2, add_u8, Reg);
+		Call; (id, add_u16, u16), (reg_1, add_u8, Reg), (reg_2, add_u8, Reg);
 		Ret; (reg_1, add_u8, Reg), (reg_2, add_u8, Reg)
 		;;
 		Move; (src, add_u8, Reg), (dst, add_u8, Reg);

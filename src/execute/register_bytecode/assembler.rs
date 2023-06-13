@@ -1,25 +1,29 @@
-use super::Instr;
+use super::{Instr, program::Program};
 
 macro_rules! add_n {
 	($n:ident, $t:ty) => {
 		#[allow(dead_code)]
 		pub fn $n(&mut self, n: $t) {
-			self.program.append(&mut n.to_le_bytes().to_vec());
+			self.program.code.append(&mut n.to_le_bytes().to_vec());
 		}
 	};
 }
 
 pub struct Assembler {
-	pub program: Vec<u8>,
+	pub program: Program,
 	pc: usize
 }
 
 impl Assembler {
-	pub const fn new() -> Self {
+	pub fn new() -> Self {
 		Self {
-			program: Vec::new(),
+			program: Program::new(),
 			pc: 0
 		}
+	}
+
+	pub fn add_function(&mut self, program: Program) {
+		self.program.functions.push(program);
 	}
 
 	add_n!(add_u8, u8);
@@ -38,10 +42,4 @@ impl Assembler {
 		self.pc += instr.size();
 		old_pc
 	}
-
-	pub fn set_val(&mut self, i: usize, val: u8) {
-		self.program[i] = val;
-	}
-
-	// pub fn push_function(&mut self) {}
 }
