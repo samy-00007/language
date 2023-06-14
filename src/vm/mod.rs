@@ -2,7 +2,7 @@
 #![allow(clippy::pedantic)]
 pub mod assembler;
 pub mod instructions;
-mod program;
+pub mod program;
 mod stack;
 mod callstack;
 
@@ -170,6 +170,14 @@ impl Vm {
 						reg,
 						StackValue::Function(self.program.functions[id].code.as_ptr())
 					);
+				}
+				Opcode::LoadTrue => {
+					let reg = self.read_reg();
+					self.set_register(reg, Register::Bool(true));
+				}
+				Opcode::LoadFalse => {
+					let reg = self.read_reg();
+					self.set_register(reg, Register::Bool(false));
 				}
 				Opcode::Push => {
 					let reg = self.read_reg();

@@ -34,6 +34,8 @@ pub enum Opcode {
 	Call,
 	Ret,
 	LoadF,
+	LoadTrue,
+	LoadFalse,
 	Push,
 	Pop,
 	// GetArg,
@@ -69,6 +71,8 @@ pub enum Instr {
 	// B: num of ret values
 	Ret(Reg, u8),
 	LoadF(Reg, u16), // R[A] = function[id]
+	LoadTrue(Reg),
+	LoadFalse(Reg),
 	Push(Reg),
 	Pop(Reg),
 	Clock(Reg),
@@ -136,7 +140,9 @@ impl Instr {
 		Print; (reg, add_u8, Reg);
 		Call; (id, add_u8, Reg), (argc, add_u8, u8), (retc, add_u8, u8);
 		Ret; (reg_1, add_u8, Reg), (n, add_u8, u8);
-		LoadF; (reg, add_u8, Reg), (id, add_u16, u16)
+		LoadF; (reg, add_u8, Reg), (id, add_u16, u16);
+		LoadTrue; (reg, add_u8, Reg);
+		LoadFalse; (reg, add_u8, Reg)
 		;;
 		Move; (src, add_u8, Reg), (dst, add_u8, Reg);
 		Add; (reg_1, add_u8, Reg), (reg_2, add_u8, Reg), (dst, add_u8, Reg);
@@ -180,7 +186,7 @@ impl Instr {
 			}
 			| Self::Call(_, _, _) => 3 * Reg::BITS,
 			Self::LoadF(_, _) => Reg::BITS + u16::BITS,
-			Self::Clock(_) | Self::Pop(_) | Self::Push(_) => Reg::BITS,
+			Self::Clock(_) | Self::Pop(_) | Self::Push(_) | Self::LoadTrue(_) | Self::LoadFalse(_) => Reg::BITS,
 			// Self::GetArg(_, _) => Reg::BITS + u8::BITS,
 			_ => 0
 		};
