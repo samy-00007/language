@@ -1,12 +1,11 @@
 #![allow(clippy::pedantic)]
 
 use crate::utils::stack::Stack;
-use std::ptr::{null, null_mut};
+use std::ptr::null;
 
-use super::Reg;
+use super::instructions::Reg;
 
 pub const CALL_STACK_SIZE: usize = 256;
-pub const REGISTER_COUNT: usize = 256;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CallStack<const N: usize> {
@@ -86,15 +85,6 @@ impl<const N: usize> Stack for CallStack<N> {
 	}
 }
 
-impl<const N: usize> CallStack<N> {
-	pub const fn new() -> Self {
-		Self {
-			stack: [CallFrame::empty(); N],
-			top: 0
-		}
-	}
-}
-
 impl<const N: usize> Default for CallStack<N> {
 	fn default() -> Self {
 		Self {
@@ -144,7 +134,7 @@ impl CallFrame {
 	}
 
 	#[inline]
-	pub unsafe fn pc(&self) -> usize {
+	pub const unsafe fn pc(&self) -> usize {
 		self.pc.offset_from(self.base) as usize
 	}
 

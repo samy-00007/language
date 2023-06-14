@@ -1,13 +1,6 @@
-pub mod assembler;
-mod callstack;
-pub mod compiler;
-pub mod program;
-mod stack;
-pub mod vm;
+pub use super::stack::*;
 
-pub use stack::*;
-
-use assembler::Assembler;
+use super::assembler::Assembler;
 
 // TODO: accumulator
 // TODO: maybe no need for jmp, just instructions for loops

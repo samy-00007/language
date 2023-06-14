@@ -1,11 +1,14 @@
 #![allow(clippy::cast_lossless)]
 #![allow(clippy::pedantic)]
-use crate::utils::stack::Stack;
+pub mod assembler;
+pub mod instructions;
+mod program;
+mod stack;
+mod callstack;
 
-use super::{
-	callstack::{CallFrame, CallStack, CALL_STACK_SIZE},
-	program::Program,
-	//program::Program
+use callstack::{CallFrame, CallStack, CALL_STACK_SIZE};
+use program::Program;
+use instructions::{
 	Address,
 	JmpMode,
 	Lit,
@@ -14,7 +17,10 @@ use super::{
 	StackValue,
 	VmStack
 };
+
 use std::cmp::Ordering;
+use crate::utils::stack::Stack;
+
 
 macro_rules! read_bytes {
 	($name:ident, $t:tt, $s:literal) => {

@@ -1,4 +1,4 @@
-use super::{program::Program, Instr};
+use super::{program::Program, instructions::Instr};
 
 macro_rules! add_n {
 	($n:ident, $t:ty) => {
@@ -15,7 +15,7 @@ pub struct Assembler {
 }
 
 impl Assembler {
-	pub fn new() -> Self {
+	pub const fn new() -> Self {
 		Self {
 			program: Program::new(),
 			pc: 0

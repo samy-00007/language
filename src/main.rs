@@ -2,16 +2,15 @@
 #![warn(clippy::nursery)]
 #![allow(clippy::inline_always)]
 
-mod execute;
+mod vm;
 mod lexer;
 mod utils;
 // mod parser;
 
 // use parser::Parser;
 
-use execute::register_bytecode::{assembler::Assembler, vm::Vm, Instr, JmpMode};
+use vm::{assembler::Assembler, Vm, instructions::{Instr, JmpMode}};
 
-use crate::execute::register_bytecode::Address;
 
 // #![feature(test)]
 // mod bench;
