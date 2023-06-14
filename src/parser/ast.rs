@@ -104,7 +104,7 @@ pub enum Expr {
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum Literal {
-	Int(i128),
+	Int(i64),
 	Float(f64), // TODO: test that
 	Bool(bool),
 	String(String)
