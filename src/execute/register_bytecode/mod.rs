@@ -40,6 +40,7 @@ pub enum Opcode {
 	Cmp,
 	Call,
 	Ret,
+	LoadF,
 	Push,
 	Pop,
 	// GetArg,
@@ -68,8 +69,13 @@ pub enum Instr {
 	Mull { reg_1: Reg, val: Lit, dst: Reg },
 	Divl { reg_1: Reg, val: Lit, dst: Reg },
 	Cmp(Reg, Reg),
-	Call(u16, Reg, Reg), // inspired by lua: load reg_1 through reg_2 as args and jump to the func at "id"
-	Ret(Reg, Reg),
+	// inspired by lua: R[A], R[A+1], ..., R[A+C-1] = R[A](R[A+1], R[A+2], ..., R[A+B])
+	// B: num of args, C: num of ret values
+	Call(Reg, u8, u8),
+	// return R[A], ..., R[A+B-1]
+	// B: num of ret values
+	Ret(Reg, u8),
+	LoadF(Reg, u16), // R[A] = function[id]
 	Push(Reg),
 	Pop(Reg),
 	Clock(Reg),
@@ -135,8 +141,9 @@ impl Instr {
 		Push; (reg, add_u8, Reg);
 		Pop; (reg, add_u8, Reg);
 		Print; (reg, add_u8, Reg);
-		Call; (id, add_u16, u16), (reg_1, add_u8, Reg), (reg_2, add_u8, Reg);
-		Ret; (reg_1, add_u8, Reg), (reg_2, add_u8, Reg)
+		Call; (id, add_u8, Reg), (argc, add_u8, u8), (retc, add_u8, u8);
+		Ret; (reg_1, add_u8, Reg), (n, add_u8, u8);
+		LoadF; (reg, add_u8, Reg), (id, add_u16, u16)
 		;;
 		Move; (src, add_u8, Reg), (dst, add_u8, Reg);
 		Add; (reg_1, add_u8, Reg), (reg_2, add_u8, Reg), (dst, add_u8, Reg);
@@ -177,8 +184,9 @@ impl Instr {
 				reg_1: _,
 				reg_2: _,
 				dst: _
-			} => 3 * Reg::BITS,
-			Self::Call(_, _, _) => Address::BITS + 2 * Reg::BITS,
+			}
+			| Self::Call(_, _, _) => 3 * Reg::BITS,
+			Self::LoadF(_, _) => Reg::BITS + u16::BITS,
 			Self::Clock(_) | Self::Pop(_) | Self::Push(_) => Reg::BITS,
 			// Self::GetArg(_, _) => Reg::BITS + u8::BITS,
 			_ => 0

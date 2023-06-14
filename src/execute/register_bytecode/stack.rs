@@ -71,7 +71,8 @@ pub enum StackValue {
 	Int(Lit),
 	Float(f64),
 	Bool(bool),
-	Address(Address)
+	Address(Address),
+	Function(*const u8) // TODO: type
 }
 
 macro_rules! stack_op {

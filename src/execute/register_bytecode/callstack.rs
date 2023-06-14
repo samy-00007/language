@@ -108,17 +108,25 @@ impl<const N: usize> Default for CallStack<N> {
 pub struct CallFrame {
 	pub base: *const u8,
 	pub pc: *const u8,
-	pub arg_count: usize,
+	pub arg_count: u8,
+	pub ret_count: u8,
 	pub reg0_p: usize,
 	pub ret_reg: Reg
 }
 
 impl CallFrame {
-	pub const fn new(pc: *const u8, arg_count: usize, reg0_p: usize, ret_reg: u8) -> Self {
+	pub const fn new(
+		pc: *const u8,
+		arg_count: u8,
+		ret_count: u8,
+		reg0_p: usize,
+		ret_reg: u8
+	) -> Self {
 		Self {
 			base: pc,
 			pc,
 			arg_count,
+			ret_count,
 			reg0_p,
 			ret_reg
 		}
@@ -129,6 +137,7 @@ impl CallFrame {
 			base: null(),
 			pc: null(),
 			arg_count: 0,
+			ret_count: 0,
 			reg0_p: 0,
 			ret_reg: 0
 		}

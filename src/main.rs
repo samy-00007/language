@@ -27,7 +27,7 @@ fn main() {
 	*/
 	let mut assembler = Assembler::new();
 
-	assembler.add_instr(Instr::Clock(0));
+	/*assembler.add_instr(Instr::Clock(0));
 	assembler.add_instr(Instr::Load(1, 1));
 	assembler.add_instr(Instr::Load(4, 1000));
 	assembler.add_instr(Instr::Jmp(JmpMode::RelativeForward, 4));
@@ -45,27 +45,41 @@ fn main() {
 	assembler.add_instr(Instr::Cmp(3, 4));
 	assembler.add_instr(Instr::Jlt(JmpMode::Absolute, add as Address));
 	assembler.add_instr(Instr::Print(2));
-	assembler.add_instr(Instr::Halt);
+	assembler.add_instr(Instr::Halt);*/
 
-	// TODO: higher level instr
+	let mut func = Assembler::new();
+	func.add_instr(Instr::Load(2, 2));
 
-	/*let mut func = Assembler::new();
-	func.add_instr(Instr::Load(1, 2));
-	func.add_instr(Instr::Cmp(0, 1));
+	func.add_instr(Instr::Cmp(0, 2));
 	func.add_instr(Instr::Jge(JmpMode::RelativeForward, 3));
-	func.add_instr(Instr::Ret(0, 1)); // return reg 00
-	func.add_instr(Instr::Subl { reg_1: 0, val: 1, dst: 2 });
-	func.add_instr(Instr::Subl { reg_1: 0, val: 2, dst: 1 });
-	func.add_instr(Instr::Call(0, 2, 3)); // reg 1 as param
-	func.add_instr(Instr::Call(0, 1, 2));
-	func.add_instr(Instr::Add { reg_1: 2, reg_2: 1, dst: 0 });
+	func.add_instr(Instr::Ret(0, 1)); // return reg 0
+	func.add_instr(Instr::Subl {
+		reg_1: 0,
+		val: 1,
+		dst: 2
+	});
+	func.add_instr(Instr::Subl {
+		reg_1: 0,
+		val: 2,
+		dst: 3
+	});
+	func.add_instr(Instr::LoadF(1, 0));
+	func.add_instr(Instr::Call(1, 1, 1)); // reg 1 as param
+	func.add_instr(Instr::LoadF(2, 0));
+	func.add_instr(Instr::Call(2, 1, 1));
+	func.add_instr(Instr::Add {
+		reg_1: 2,
+		reg_2: 1,
+		dst: 0
+	});
 	func.add_instr(Instr::Ret(0, 1));
 	assembler.add_function(func.program);
 
-	println!("{}", assembler.add_instr(Instr::Load(0, 14)));
-	assembler.add_instr(Instr::Call(0, 0, 1));
+	assembler.add_instr(Instr::LoadF(0, 0));
+	assembler.add_instr(Instr::Load(1, 3));
+	assembler.add_instr(Instr::Call(0, 1, 1));
 	assembler.add_instr(Instr::Print(0));
-	assembler.add_instr(Instr::Halt);*/
+	assembler.add_instr(Instr::Halt);
 
 	/*
 	   fn fibonacci(n: number) -> number  {

@@ -48,24 +48,26 @@ impl Vm {
 			call_stack: CallStack::default(),
 			current_frame: std::ptr::null_mut() as *mut CallFrame
 		};
-		s.current_frame = s.call_stack.last_mut() as *mut _;
-		unsafe {
-			(*s.current_frame).pc = s.program.code.as_ptr();
-			(*s.current_frame).base = s.program.code.as_ptr();
-		}
 		s.ensure_register_exists(10); // preallocate 10 registers, as of now, they are not allocated automatically
 		s
 	}
 
 	// maybe trait
 	pub fn run(&mut self) {
+		self.update_current_frame();
+		unsafe {
+			(*self.current_frame).pc = self.program.code.as_ptr();
+			(*self.current_frame).base = self.program.code.as_ptr();
+		}
+
 		loop {
 			let op = self.pc();
 			let op = unsafe { op.cast::<Opcode>().read_unaligned() };
 
 			// println!("{:?}", self.program);
-			// println!("{op:?}\n");
-			// println!("{}\n", self.pc());
+			let depth = "|".repeat(self.call_stack.len() - 1);
+			println!("{} {op:?}", depth);
+			println!("{} {}\n", depth, unsafe { (*self.current_frame).pc() });
 
 			self.increment_pc();
 			match op {
@@ -110,46 +112,58 @@ impl Vm {
 					self.set_register(reg, Register::Int(ms));
 				}
 				Opcode::Call => {
-					let id = self.read_u16() as usize;
-					let reg_1 = self.read_reg();
-					let reg_2 = self.read_reg();
+					let ra = self.read_reg();
+					let arg_count = self.read_u8();
+					let ret_count = self.read_u8();
 
-					assert!(reg_2 >= reg_1);
+					#[cfg(debug_assertions)]
+					assert!(ra.checked_add(arg_count).is_some());
+					#[cfg(debug_assertions)]
+					assert!(ra.checked_add(ret_count).is_some());
+
+					let function = self.get_register(ra);
+
+					let StackValue::Function(func) = function else {
+						panic!("Expected function to call in register");
+					};
 
 					let base = unsafe { (*self.current_frame).reg0_p }; // TODO: put that in a function
 
-					let arg_count = (reg_2 - reg_1) as usize;
-
-					let func = self.program.functions[id].code.as_ptr();
-
-					let frame = CallFrame::new(func, arg_count, self.stack.len(), reg_1);
+					let frame = CallFrame::new(func, arg_count, ret_count, self.stack.len(), ra);
 					self.call_stack.push(frame);
 					self.update_current_frame();
 
-					let to_add = vec![Register::zero(); arg_count + 5]; // preallocate argcount + 5 registers for the function
-					self.stack.append(&to_add);
+					//let to_add = vec![Register::zero(); arg_count + 5]; // preallocate argcount + 5 registers for the function
+					//self.stack.append(&to_add);
+					self.ensure_register_exists(arg_count as usize + 5);
 
-					for i in 0..(reg_2 - reg_1) {
-						let val = self.raw_get_register(base, reg_1 + i);
+					for i in 0..arg_count {
+						let val = self.raw_get_register(base, ra + 1 + i);
 						self.set_register(i, val);
 					}
 				}
 				Opcode::Ret => {
-					let reg_1 = self.read_reg();
-					let reg_2 = self.read_reg();
-
-					assert!(reg_2 >= reg_1);
+					let ra = self.read_reg();
+					let ret_count = self.read_u8();
 
 					let frame = self.call_stack.pop();
 					self.update_current_frame();
 					let base = frame.reg0_p;
 					let ret_reg = frame.ret_reg;
 
-					for i in 0..(reg_2 - reg_1) {
-						let val = self.raw_get_register(base, reg_1 + i);
+					for i in 0..ret_count {
+						let val = self.raw_get_register(base, ra + i);
 						self.set_register(ret_reg + i, val);
 					}
 					self.stack.remove(self.stack.len() - base);
+				}
+				Opcode::LoadF => {
+					let reg = self.read_reg();
+					let id = self.read_u16() as usize;
+					self.set_register(
+						reg,
+						StackValue::Function(self.program.functions[id].code.as_ptr())
+					);
 				}
 				Opcode::Push => {
 					let reg = self.read_reg();
