@@ -36,6 +36,7 @@ pub enum Opcode {
 	LoadF,
 	LoadTrue,
 	LoadFalse,
+	LoadFloat,
 	Push,
 	Pop,
 	// GetArg,
@@ -44,7 +45,7 @@ pub enum Opcode {
 }
 
 // TODO: use derive macro to generate the compile automatically
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Instr {
 	Halt,
 	Nop,
@@ -73,6 +74,7 @@ pub enum Instr {
 	LoadF(Reg, u16), // R[A] = function[id]
 	LoadTrue(Reg),
 	LoadFalse(Reg),
+	LoadFloat(Reg, f64),
 	Push(Reg),
 	Pop(Reg),
 	Clock(Reg),
@@ -142,7 +144,8 @@ impl Instr {
 		Ret; (reg_1, add_u8, Reg), (n, add_u8, u8);
 		LoadF; (reg, add_u8, Reg), (id, add_u16, u16);
 		LoadTrue; (reg, add_u8, Reg);
-		LoadFalse; (reg, add_u8, Reg)
+		LoadFalse; (reg, add_u8, Reg);
+		LoadFloat; (reg, add_u8, Reg), (val, add_f64, f64)
 		;;
 		Move; (src, add_u8, Reg), (dst, add_u8, Reg);
 		Add; (reg_1, add_u8, Reg), (reg_2, add_u8, Reg), (dst, add_u8, Reg);
@@ -187,6 +190,7 @@ impl Instr {
 			| Self::Call(_, _, _) => 3 * Reg::BITS,
 			Self::LoadF(_, _) => Reg::BITS + u16::BITS,
 			Self::Clock(_) | Self::Pop(_) | Self::Push(_) | Self::LoadTrue(_) | Self::LoadFalse(_) => Reg::BITS,
+			Self::LoadFloat(_, _) => Reg::BITS + 64, // f64
 			// Self::GetArg(_, _) => Reg::BITS + u8::BITS,
 			_ => 0
 		};

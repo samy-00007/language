@@ -179,6 +179,11 @@ impl Vm {
 					let reg = self.read_reg();
 					self.set_register(reg, Register::Bool(false));
 				}
+				Opcode::LoadFloat => {
+					let reg = self.read_reg();
+					let val = self.read_float();
+					self.set_register(reg, Register::Float(val));
+				}
 				Opcode::Push => {
 					let reg = self.read_reg();
 					self.stack.push(self.get_register(reg));
@@ -266,6 +271,11 @@ impl Vm {
 		self.read_i64()
 	}
 
+	#[inline]
+	fn read_float(&mut self) -> f64 {
+		self.read_f64()
+	}
+
 	#[inline(always)]
 	#[allow(clippy::assertions_on_constants)]
 	fn read_reg(&mut self) -> Reg {
@@ -321,4 +331,6 @@ impl Vm {
 
 	read_bytes!(read_u64, u64, 8);
 	read_bytes!(read_i64, i64, 8);
+	
+	read_bytes!(read_f64, f64, 8);
 }

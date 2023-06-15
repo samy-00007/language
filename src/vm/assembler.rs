@@ -35,6 +35,8 @@ impl Assembler {
 	add_n!(add_i16, i16);
 	add_n!(add_i32, i32);
 	add_n!(add_i64, i64);
+	
+	add_n!(add_f64, f64);
 
 	pub fn add_instr(&mut self, instr: Instr) -> usize {
 		instr.compile(self);
