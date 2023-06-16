@@ -45,6 +45,7 @@ pub enum Opcode {
 }
 
 // TODO: use derive macro to generate the compile automatically
+// TODO: standardize the op orders to other assembly languages
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Instr {
 	Halt,
