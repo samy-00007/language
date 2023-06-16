@@ -2,10 +2,13 @@
 #![warn(clippy::nursery)]
 #![allow(clippy::inline_always)]
 
+#![feature(core_intrinsics)]
+
 mod vm;
 mod lexer;
 mod utils;
-// mod parser;
+mod codegen;
+mod parser;
 
 // use parser::Parser;
 
