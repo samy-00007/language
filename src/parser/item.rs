@@ -32,7 +32,7 @@ where
 		Item::Function {
 			name,
 			args,
-			t,
+			ty: t,
 			block
 		}
 	}

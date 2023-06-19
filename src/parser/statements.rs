@@ -25,7 +25,7 @@ where
 		self.consume(Token::SemiColon);
 		Stmt::Local {
 			name,
-			t,
+			ty: t,
 			val: Box::new(expr)
 		}
 	}
@@ -123,7 +123,7 @@ mod tests {
 		let mut parser = Parser::new("let abcd: number = 10;");
 		let expected = vec![Stmt::Local {
 			name: "abcd".into(),
-			t: Some(Ty::Ident("number".into())),
+			ty: Some(Ty::Ident("number".into())),
 			val: Expr::Lit(Literal::Int(10)).into()
 		}];
 

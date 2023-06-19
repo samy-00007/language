@@ -46,7 +46,7 @@ pub enum Item {
 	Function {
 		name: String,
 		args: Vec<Argument>,
-		t: Ty,
+		ty: Ty,
 		block: Block
 	},
 	Struct {
@@ -66,7 +66,7 @@ pub enum Stmt {
 	Local {
 		// var decl
 		name: String,
-		t: Option<Ty>,
+		ty: Option<Ty>,
 		val: E
 	},
 	// Function {
@@ -196,7 +196,7 @@ impl Display for Stmt {
 			Self::Expr(x) => format!("{x};"),
 			Self::FnReturn(x) => format!("return {x}"),
 			Self::If { cond, block } => format!("if ({}) {{\n{}\n}}", cond, print_s(block, "\n")),
-			Self::Local { name, t, val } => {
+			Self::Local { name, ty: t, val } => {
 				let t_ = t
 					.as_ref()
 					.map_or_else(String::new, |t| format!(": {:?}", t));
