@@ -9,14 +9,14 @@ where
 	fn parse_let(&mut self) -> Stmt {
 		let name = self.get_ident();
 
-		let t = if self.at(Token::Colon) {
+		let ty = if self.at(Token::Colon) {
 			self.next();
 			Some(self.parse_ty())
 		} else {
 			None
 		};
 
-		if t.is_none() && !self.allow_implicit_types {
+		if ty.is_none() && !self.allow_implicit_types {
 			self.push_error(ParseError::NoImplicitTypeAllowed);
 		}
 
@@ -25,7 +25,7 @@ where
 		self.consume(Token::SemiColon);
 		Stmt::Local {
 			name,
-			ty: t,
+			ty,
 			val: Box::new(expr)
 		}
 	}
