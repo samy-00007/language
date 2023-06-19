@@ -19,7 +19,6 @@ use vm::Vm;
 // mod bench;
 
 fn main() {
-	
 	const _CODE: &str = "
 	fn fib(n: number) {
 		if (n < 2) {
@@ -39,7 +38,7 @@ fn main() {
 	}
 	print(i);
 	";
-	
+
 	let mut compiler = Compiler::new();
 
 	let mut parser = Parser::new(CODE);
@@ -53,9 +52,7 @@ fn main() {
 
 	let mut vm = Vm::new(program);
 	vm.run();
-
 }
-
 
 /*
    TODO: optimize everything (lexer, parser, ...)

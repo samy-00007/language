@@ -1,25 +1,16 @@
 #![allow(clippy::cast_lossless)]
 #![allow(clippy::pedantic)]
+mod callstack;
 pub mod instructions;
 pub mod program;
 mod stack;
-mod callstack;
 
 use callstack::{CallFrame, CallStack, CALL_STACK_SIZE};
+use instructions::{Address, JmpMode, Lit, Opcode, Reg, StackValue, VmStack};
 use program::Program;
-use instructions::{
-	Address,
-	JmpMode,
-	Lit,
-	Opcode,
-	Reg,
-	StackValue,
-	VmStack
-};
 
-use std::cmp::Ordering;
 use crate::utils::stack::Stack;
-
+use std::cmp::Ordering;
 
 macro_rules! read_bytes {
 	($name:ident, $t:tt, $s:literal) => {
@@ -54,7 +45,7 @@ impl Vm {
 			current_frame: std::ptr::null_mut() as *mut CallFrame
 		}
 	}
-	
+
 	// maybe trait
 	pub fn run(&mut self) {
 		self.update_current_frame();
@@ -93,7 +84,7 @@ impl Vm {
 					let mode = self.read_u8();
 					let mode = std::ptr::addr_of!(mode);
 					let mode = unsafe { mode.cast::<JmpMode>().read_unaligned() };
-					
+
 					let reg = self.read_reg();
 					let val = self.get_register(reg);
 					let StackValue::Bool(cond) = val else { panic!("only bools can be used to jump conditionally (true)"); };
@@ -106,12 +97,12 @@ impl Vm {
 							JmpMode::RelativeForward => self.add_to_pc(address as usize)
 						}
 					}
-				},
+				}
 				Opcode::JmpIfFalse => {
 					let mode = self.read_u8();
 					let mode = std::ptr::addr_of!(mode);
 					let mode = unsafe { mode.cast::<JmpMode>().read_unaligned() };
-					
+
 					let reg = self.read_reg();
 					let val = self.get_register(reg);
 					let StackValue::Bool(cond) = val else { panic!("only bools can be used to jump conditionally (false)"); };
@@ -124,17 +115,17 @@ impl Vm {
 							JmpMode::RelativeForward => self.add_to_pc(address as usize)
 						}
 					}
-				},
+				}
 				Opcode::Add => self.op(std::ops::Add::add),
 				Opcode::Sub => self.op(std::ops::Sub::sub),
 				Opcode::Mul => self.op(std::ops::Mul::mul),
 				Opcode::Div => self.op(std::ops::Div::div),
-				Opcode::Lt  => self.cmp(Ordering::Less),
+				Opcode::Lt => self.cmp(Ordering::Less),
 				Opcode::Addl => self.op_lit(std::ops::Add::add),
 				Opcode::Subl => self.op_lit(std::ops::Sub::sub),
 				Opcode::Mull => self.op_lit(std::ops::Mul::mul),
 				Opcode::Divl => self.op_lit(std::ops::Div::div),
-				Opcode::Ltl  => self.cmp_lit(Ordering::Less),
+				Opcode::Ltl => self.cmp_lit(Ordering::Less),
 				Opcode::Cmp => {
 					let reg_1 = self.read_reg();
 					let reg_2 = self.read_reg();
@@ -242,17 +233,17 @@ impl Vm {
 	fn ensure_register_exists(&mut self, reg: u8) -> usize {
 		let base = (unsafe { *self.current_frame }).reg0_p;
 		let address = base + reg as usize;
-		
+
 		if address >= self.stack.capacity() {
 			let to_add = address + 1 - self.stack.capacity();
 			let to_add = vec![Register::zero(); to_add];
 			self.stack.append(&to_add);
 		} else if self.stack.top < address {
-			self.stack.top = address;//+= reg as usize;
+			self.stack.top = address; //+= reg as usize;
 		}
 		address
 	}
-	
+
 	fn get_register(&self, reg: Reg) -> Register {
 		let base = (unsafe { *self.current_frame }).reg0_p;
 		self.raw_get_register(base, reg)
@@ -389,6 +380,6 @@ impl Vm {
 
 	read_bytes!(read_u64, u64, 8);
 	read_bytes!(read_i64, i64, 8);
-	
+
 	read_bytes!(read_f64, f64, 8);
 }

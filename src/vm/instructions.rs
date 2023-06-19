@@ -100,7 +100,6 @@ impl Display for JmpMode {
 	}
 }
 
-
 macro_rules! add_n {
 	($n:ident, $t:ty) => {
 		#[allow(dead_code)]
@@ -121,7 +120,6 @@ add_n!(add_i32, i32);
 add_n!(add_i64, i64);
 
 add_n!(add_f64, f64);
-
 
 macro_rules! match_ops {
 	[

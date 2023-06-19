@@ -1,6 +1,5 @@
-use crate::parser::ast::{Ty, Literal};
-use std::ops::{Add, Sub, Mul, Div};
-
+use crate::parser::ast::{Literal, Ty};
+use std::ops::{Add, Div, Mul, Sub};
 
 #[derive(Debug)]
 pub struct Var {
@@ -25,11 +24,11 @@ impl From<Ty> for Type {
 	fn from(value: Ty) -> Self {
 		let Ty::Ident(ty) = value else {unreachable!()}; // TODO: handle that
 		match ty.as_str() {
-				"string" => Self::String,
-				"number" => Self::Number,
-				"bool" => Self::Bool,
-				_ => unreachable!()
-			}
+			"string" => Self::String,
+			"number" => Self::Number,
+			"bool" => Self::Bool,
+			_ => unreachable!()
+		}
 	}
 }
 

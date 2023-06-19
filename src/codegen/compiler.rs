@@ -1,4 +1,4 @@
-use crate::{match_infix_op, parser::ast::Prefix, match_infix_op_lit};
+use crate::{match_infix_op, match_infix_op_lit, parser::ast::Prefix};
 
 use super::{assembler::Assembler, env::Env};
 use crate::{
@@ -45,25 +45,24 @@ impl Compiler {
 
 					self.assembler.add_instr(instr);
 
-					// TODO: constant lhs
+				// TODO: constant lhs
 				} else {
 					let other_reg = self.env.allocate_reg();
 					let rhs = self.compile_expr(other_reg, *rhs);
-
 
 					// TODO: handle type checking
 					// TODO: handle other ops
 
 					let instr = match_infix_op!(op, lhs, rhs, reg; Add, Mul, Sub, Div, Lt);
-					
-					
+
 					self.assembler.add_instr(instr);
 					self.env.free_last_reg();
 				}
 				reg
 			}
 			Expr::FnNamedCall { name, args } => {
-				if name == *"print" { // should be temporary, will be removed when proper std functions will be added
+				if name == *"print" {
+					// should be temporary, will be removed when proper std functions will be added
 					let arg = args.into_iter().next().unwrap();
 					let reg = self.compile_expr(reg, arg);
 
@@ -131,12 +130,14 @@ impl Compiler {
 		match expr {
 			Expr::Ident(_) => false, // TODO: check if the val of the ident (fn or variable) is constant
 			Expr::Lit(_) => true,
-			Expr::Infix { op: _, lhs, rhs } => Self::is_expr_constant(lhs.as_ref()) && Self::is_expr_constant(rhs.as_ref()),
+			Expr::Infix { op: _, lhs, rhs } => {
+				Self::is_expr_constant(lhs.as_ref()) && Self::is_expr_constant(rhs.as_ref())
+			}
 			Expr::Prefix(_, expr) => Self::is_expr_constant(expr.as_ref()),
 			Expr::FnNamedCall { name: _, args: _ } => false, //unimplemented!(),
-			Expr::FnCall { expr: _, args: _ } => false, //unimplemented!(),
-			Expr::Block(_) => false, //unimplemented!(),
-			Expr::Error => false, //unreachable!()
+			Expr::FnCall { expr: _, args: _ } => false,      //unimplemented!(),
+			Expr::Block(_) => false,                         //unimplemented!(),
+			Expr::Error => false                             //unreachable!()
 		}
 	}
 
@@ -144,8 +145,12 @@ impl Compiler {
 		match expr {
 			Expr::Lit(x) => x.clone(),
 			Expr::Prefix(prefix, expr) => Self::compute_constant_prefix(*prefix, expr.as_ref()),
-			Expr::Infix { op, lhs, rhs } => Self::compute_constant_infix(*op, lhs.as_ref(), rhs.as_ref()),
-			Expr::Block(_) | Expr::FnCall { expr: _, args: _ } | Expr::FnNamedCall { name: _, args: _ } => todo!(),
+			Expr::Infix { op, lhs, rhs } => {
+				Self::compute_constant_infix(*op, lhs.as_ref(), rhs.as_ref())
+			}
+			Expr::Block(_)
+			| Expr::FnCall { expr: _, args: _ }
+			| Expr::FnNamedCall { name: _, args: _ } => todo!(),
 			Expr::Error | Expr::Ident(_) => unreachable!()
 		}
 	}
@@ -159,18 +164,18 @@ impl Compiler {
 				} else {
 					panic!("Prefix 'bitnot' can only be applied to integers")
 				}
-			},
+			}
 			Prefix::Not => {
 				if let Literal::Bool(x) = val {
 					Literal::Bool(!x)
 				} else {
 					panic!("Prefix 'not' can only be applied to bools")
 				}
-			},
+			}
 			Prefix::Plus => {
 				assert!(matches!(val, Literal::Float(_) | Literal::Int(_)));
 				val
-			},
+			}
 			Prefix::Minus => {
 				if let Literal::Int(x) = val {
 					Literal::Int(-x)
@@ -179,7 +184,7 @@ impl Compiler {
 				} else {
 					panic!("Prefix 'minus' can only be applied to numbers")
 				}
-			},
+			}
 			Prefix::Err => unreachable!()
 		}
 	}
@@ -196,24 +201,24 @@ impl Compiler {
 				assert!(matches!(lhs, Literal::Bool(_)));
 				assert!(matches!(rhs, Literal::Bool(_)));
 				todo!() //lhs & rhs
-			},
+			}
 			Operator::BitAnd => {
 				assert!(matches!(lhs, Literal::Int(_) | Literal::Float(_)));
 				assert!(matches!(rhs, Literal::Int(_) | Literal::Float(_)));
-				todo!() //lhs & rhs	
-			},
-			Operator::BitOr => todo!(),//lhs | rhs,
-			Operator::BitXor => todo!(),//lhs ^ rhs,
-			Operator::Exponent => todo!(),//lhs.pow(rhs),
+				todo!() //lhs & rhs
+			}
+			Operator::BitOr => todo!(),    //lhs | rhs,
+			Operator::BitXor => todo!(),   //lhs ^ rhs,
+			Operator::Exponent => todo!(), //lhs.pow(rhs),
 			Operator::Gt => Literal::Bool(lhs > rhs),
 			Operator::Gte => Literal::Bool(lhs >= rhs),
 			Operator::Lt => Literal::Bool(lhs < rhs),
 			Operator::Lte => Literal::Bool(lhs <= rhs),
 			Operator::Eq => Literal::Bool(lhs == rhs),
 			Operator::Neq => Literal::Bool(lhs != rhs),
-			Operator::LShift => todo!(),//lhs << rhs,
-			Operator::RShift => todo!(),//lhs >> rhs,
-			Operator::Rem => todo!(),//lhs % rhs,
+			Operator::LShift => todo!(), //lhs << rhs,
+			Operator::RShift => todo!(), //lhs >> rhs,
+			Operator::Rem => todo!(),    //lhs % rhs,
 			_ => unreachable!()
 		}
 	}
@@ -248,13 +253,15 @@ impl Compiler {
 				self.env.free_last_reg();
 
 				self.compile_block(block);
-				let len = Address::try_from(self.assembler.program.code.len()).expect("Address bigger than maximum allowed"); // TODO: change that
+				let len = Address::try_from(self.assembler.program.code.len())
+					.expect("Address bigger than maximum allowed"); // TODO: change that
 
 				self.assembler
 					.set_instr(jmp, Instr::JmpIfFalse(JmpMode::Absolute, reg, len));
 			}
 			Stmt::While { cond, block } => {
-				let while_start = Address::try_from(self.assembler.program.code.len()).expect("Address bigger than maximum allowed");
+				let while_start = Address::try_from(self.assembler.program.code.len())
+					.expect("Address bigger than maximum allowed");
 				let reg = self.env.allocate_reg();
 				self.compile_expr(reg, cond);
 				let jmp = self
@@ -265,21 +272,20 @@ impl Compiler {
 				self.compile_block(block);
 				self.assembler
 					.add_instr(Instr::Jmp(JmpMode::Absolute, while_start));
-				let len = Address::try_from(self.assembler.program.code.len()).expect("Address bigger than maximum allowed"); // TODO: change that
+				let len = Address::try_from(self.assembler.program.code.len())
+					.expect("Address bigger than maximum allowed"); // TODO: change that
 
 				let range = (jmp + 3)..(jmp + 3 + (Address::BITS / 8) as usize); // u16 = 2 bytes
 
-				self.assembler
-					.program
-					.code
-					.splice(range, len.to_le_bytes());
+				self.assembler.program.code.splice(range, len.to_le_bytes());
 			}
 		}
 	}
 
 	fn compile_function(&mut self, name: String, args: Vec<Argument>, ty: Ty, block: Vec<Stmt>) {
 		let mut f = Self::new();
-		let i = u16::try_from(self.assembler.program.functions.len()).expect("More than 2^16 - 1 (u16) functions");
+		let i = u16::try_from(self.assembler.program.functions.len())
+			.expect("More than 2^16 - 1 (u16) functions");
 
 		f.env.set_function(name.clone(), i);
 		self.env.set_function(name, i);

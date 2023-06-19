@@ -25,7 +25,7 @@ impl Stack for VmStack {
 		self.top += 1;
 		self.stack.push(val);
 	}
-	
+
 	fn pop(&mut self) -> Self::Value {
 		self.top -= 1;
 		self.stack.pop().unwrap()
@@ -69,7 +69,10 @@ impl Stack for VmStack {
 
 impl VmStack {
 	pub const fn new() -> Self {
-		Self { stack: Vec::new(), top: 0 }
+		Self {
+			stack: Vec::new(),
+			top: 0
+		}
 	}
 
 	pub fn preallocate(&mut self, other: &[StackValue]) {
