@@ -129,10 +129,12 @@ impl Vm {
 				Opcode::Sub => self.op(std::ops::Sub::sub),
 				Opcode::Mul => self.op(std::ops::Mul::mul),
 				Opcode::Div => self.op(std::ops::Div::div),
+				Opcode::Lt  => self.cmp(Ordering::Less),
 				Opcode::Addl => self.op_lit(std::ops::Add::add),
 				Opcode::Subl => self.op_lit(std::ops::Sub::sub),
 				Opcode::Mull => self.op_lit(std::ops::Mul::mul),
 				Opcode::Divl => self.op_lit(std::ops::Div::div),
+				Opcode::Ltl  => self.cmp_lit(Ordering::Less),
 				Opcode::Cmp => {
 					let reg_1 = self.read_reg();
 					let reg_2 = self.read_reg();
@@ -274,6 +276,28 @@ impl Vm {
 		let dst = self.read_reg();
 
 		self.set_register(dst, op(self.get_register(reg_1), self.get_register(reg_2))); // TODO: handle overflow
+	}
+
+	#[inline(always)]
+	fn cmp(&mut self, ord: Ordering) {
+		let reg_1 = self.read_reg();
+		let reg_2 = self.read_reg();
+		let dst = self.read_reg();
+
+		let cmp = self.get_register(reg_1).cmp(&self.get_register(reg_2));
+
+		self.set_register(dst, StackValue::Bool(cmp == ord)); // TODO: handle overflow
+	}
+
+	#[inline(always)]
+	fn cmp_lit(&mut self, ord: Ordering) {
+		let reg_1 = self.read_reg();
+		let val = self.read_lit();
+		let dst = self.read_reg();
+
+		let cmp = self.get_register(reg_1).cmp(&StackValue::Int(val));
+
+		self.set_register(dst, StackValue::Bool(cmp == ord)); // TODO: handle overflow
 	}
 
 	#[inline(always)]
