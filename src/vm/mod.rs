@@ -1,6 +1,5 @@
 #![allow(clippy::cast_lossless)]
 #![allow(clippy::pedantic)]
-pub mod assembler;
 pub mod instructions;
 pub mod program;
 mod stack;
@@ -189,10 +188,10 @@ impl Vm {
 					let ret_reg = frame.ret_reg;
 
 					for i in 0..ret_count {
-						let val = self.raw_get_register(base, ra + i);
+						let val = self.raw_get_register(base, ra + i); // TODO: maybe don't move the regs, just give the fn access to them
 						self.set_register(ret_reg + i, val);
 					}
-					//self.stack.remove(self.stack.len() - base);
+					self.stack.remove(self.stack.len() - base);
 				}
 				Opcode::LoadF => {
 					let reg = self.read_reg();
@@ -246,8 +245,8 @@ impl Vm {
 			let to_add = address + 1 - self.stack.capacity();
 			let to_add = vec![Register::zero(); to_add];
 			self.stack.append(&to_add);
-		} else {
-			self.stack.top += reg as usize;
+		} else if self.stack.top < address {
+			self.stack.top = address;//+= reg as usize;
 		}
 		address
 	}

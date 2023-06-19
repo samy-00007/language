@@ -8,7 +8,8 @@ use std::{
 
 #[derive(Debug)]
 pub struct VmStack {
-	stack: Vec<StackValue>
+	stack: Vec<StackValue>,
+	pub top: usize
 }
 
 impl Stack for VmStack {
@@ -16,14 +17,17 @@ impl Stack for VmStack {
 	type Value = StackValue;
 
 	fn append(&mut self, other: &[Self::Value]) {
+		self.top += other.len();
 		self.stack.append(&mut other.to_vec());
 	}
 
 	fn push(&mut self, val: Self::Value) {
+		self.top += 1;
 		self.stack.push(val);
 	}
-
+	
 	fn pop(&mut self) -> Self::Value {
+		self.top -= 1;
 		self.stack.pop().unwrap()
 	}
 
@@ -48,21 +52,32 @@ impl Stack for VmStack {
 	}
 
 	fn len(&self) -> usize {
-		self.stack.len()
+		//self.stack.len()
+		self.top
 	}
 
 	fn remove(&mut self, n: usize) {
-		self.stack.truncate(self.len() - n);
+		//self.stack.truncate(self.len() - n); // TODO: fix that
+		self.top -= n;
 	}
 
 	fn reset(&mut self) {
 		self.stack.clear();
+		self.top = 0;
 	}
 }
 
 impl VmStack {
 	pub const fn new() -> Self {
-		Self { stack: Vec::new() }
+		Self { stack: Vec::new(), top: 0 }
+	}
+
+	pub fn preallocate(&mut self, other: &[StackValue]) {
+		self.stack.extend_from_slice(other);
+	}
+
+	pub fn capacity(&self) -> usize {
+		self.stack.len()
 	}
 }
 
