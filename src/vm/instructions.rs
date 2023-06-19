@@ -2,8 +2,6 @@ use std::fmt::Display;
 
 pub use super::stack::*;
 
-use super::assembler::Assembler;
-
 // TODO: accumulator
 // TODO: maybe no need for jmp, just instructions for loops
 
@@ -26,10 +24,12 @@ pub enum Opcode {
 	Sub,
 	Mul,
 	Div,
+	Lt,
 	Addl,
 	Subl,
 	Mull,
 	Divl,
+	Ltl,
 	Cmp,
 	Call,
 	Ret,
@@ -55,14 +55,16 @@ pub enum Instr {
 	Jmp(JmpMode, Address),
 	JmpIfTrue(JmpMode, Reg, Address),
 	JmpIfFalse(JmpMode, Reg, Address),
-	Add { reg_1: Reg, reg_2: Reg, dst: Reg },
-	Sub { reg_1: Reg, reg_2: Reg, dst: Reg },
-	Mul { reg_1: Reg, reg_2: Reg, dst: Reg },
-	Div { reg_1: Reg, reg_2: Reg, dst: Reg },
-	Addl { reg_1: Reg, val: Lit, dst: Reg },
-	Subl { reg_1: Reg, val: Lit, dst: Reg },
-	Mull { reg_1: Reg, val: Lit, dst: Reg },
-	Divl { reg_1: Reg, val: Lit, dst: Reg },
+	Add { op_1: Reg, op_2: Reg, dst: Reg },
+	Sub { op_1: Reg, op_2: Reg, dst: Reg },
+	Mul { op_1: Reg, op_2: Reg, dst: Reg },
+	Div { op_1: Reg, op_2: Reg, dst: Reg },
+	Lt { op_1: Reg, op_2: Reg, dst: Reg },
+	Addl { op_1: Reg, op_2: Lit, dst: Reg },
+	Subl { op_1: Reg, op_2: Lit, dst: Reg },
+	Mull { op_1: Reg, op_2: Lit, dst: Reg },
+	Divl { op_1: Reg, op_2: Lit, dst: Reg },
+	Ltl { op_1: Reg, op_2: Lit, dst: Reg },
 	Cmp(Reg, Reg),
 	// inspired by lua: R[A], R[A+1], ..., R[A+C-1] = R[A](R[A+1], R[A+2], ..., R[A+B])
 	// B: num of args, C: num of ret values
@@ -99,6 +101,27 @@ impl Display for JmpMode {
 }
 
 
+macro_rules! add_n {
+	($n:ident, $t:ty) => {
+		#[allow(dead_code)]
+		fn $n(buffer: &mut Vec<u8>, n: $t) {
+			buffer.append(&mut n.to_le_bytes().to_vec());
+		}
+	};
+}
+
+add_n!(add_u8, u8);
+add_n!(add_u16, u16);
+add_n!(add_u32, u32);
+add_n!(add_u64, u64);
+
+add_n!(add_i8, i8);
+add_n!(add_i16, i16);
+add_n!(add_i32, i32);
+add_n!(add_i64, i64);
+
+add_n!(add_f64, f64);
+
 
 macro_rules! match_ops {
 	[
@@ -106,27 +129,27 @@ macro_rules! match_ops {
 		$($name_2:ident; $(($a:ident, $fn:ident, $t:ty)),*);* ;;
 		$($name_3:ident; $(($a_:ident, $fn_:ident, $t_:ty)),*);*
 		] => {
-		pub fn compile(self, assembler: &mut Assembler) {
+		pub fn compile(self, buffer: &mut Vec<u8>) {
 			match self {
 				$(
 					Self::$name_1 => {
-						assembler.add_u8(Opcode::$name_1 as u8);
+						add_u8(buffer, Opcode::$name_1 as u8);
 					}
 				),*
 
 				$(
 					Self::$name_2 ( $($a),* ) => {
-						assembler.add_u8(Opcode::$name_2 as u8);
+						add_u8(buffer, Opcode::$name_2 as u8);
 						$(
-							assembler.$fn($a as $t);
+							$fn(buffer, $a as $t);
 						)*
 					}
 				),*
 				$(
 					Self::$name_3 { $($a_),* } => {
-						assembler.add_u8(Opcode::$name_3 as u8);
+						add_u8(buffer, Opcode::$name_3 as u8);
 						$(
-							assembler.$fn_($a_ as $t_);
+							$fn_(buffer, $a_ as $t_);
 						)*
 					}
 				),*
@@ -187,57 +210,15 @@ impl Instr {
 		LoadFloat; (reg, add_u8, Reg), (val, add_f64, f64)
 		;;
 		Move; (src, add_u8, Reg), (dst, add_u8, Reg);
-		Add; (reg_1, add_u8, Reg), (reg_2, add_u8, Reg), (dst, add_u8, Reg);
-		Sub; (reg_1, add_u8, Reg), (reg_2, add_u8, Reg), (dst, add_u8, Reg);
-		Mul; (reg_1, add_u8, Reg), (reg_2, add_u8, Reg), (dst, add_u8, Reg);
-		Div; (reg_1, add_u8, Reg), (reg_2, add_u8, Reg), (dst, add_u8, Reg);
-		Addl; (reg_1, add_u8, Reg), (val, add_i64, Lit), (dst, add_u8, Reg);
-		Subl; (reg_1, add_u8, Reg), (val, add_i64, Lit), (dst, add_u8, Reg);
-		Mull; (reg_1, add_u8, Reg), (val, add_i64, Lit), (dst, add_u8, Reg);
-		Divl; (reg_1, add_u8, Reg), (val, add_i64, Lit), (dst, add_u8, Reg)
+		Add; (op_1, add_u8, Reg), (op_2, add_u8, Reg), (dst, add_u8, Reg);
+		Sub; (op_1, add_u8, Reg), (op_2, add_u8, Reg), (dst, add_u8, Reg);
+		Mul; (op_1, add_u8, Reg), (op_2, add_u8, Reg), (dst, add_u8, Reg);
+		Div; (op_1, add_u8, Reg), (op_2, add_u8, Reg), (dst, add_u8, Reg);
+		Lt; (op_1, add_u8, Reg), (op_2, add_u8, Reg), (dst, add_u8, Reg);
+		Addl; (op_1, add_u8, Reg), (op_2, add_i64, Lit), (dst, add_u8, Reg);
+		Subl; (op_1, add_u8, Reg), (op_2, add_i64, Lit), (dst, add_u8, Reg);
+		Mull; (op_1, add_u8, Reg), (op_2, add_i64, Lit), (dst, add_u8, Reg);
+		Divl; (op_1, add_u8, Reg), (op_2, add_i64, Lit), (dst, add_u8, Reg);
+		Ltl; (op_1, add_u8, Reg), (op_2, add_i64, Lit), (dst, add_u8, Reg)
 	];
-
-	#[allow(clippy::cast_possible_truncation)]
-	pub const fn size(self) -> usize {
-		let mut n = 1; // opcode
-		let to_add = match self {
-			Self::Load(_, _) => Reg::BITS + Lit::BITS,
-			Self::Move { src: _, dst: _ } | Self::Cmp(_, _) | Self::Ret(_, _) => 2 * Reg::BITS,
-			Self::Jmp(_, _) => {
-				std::mem::size_of::<JmpMode>() as u32 * 8 + Address::BITS
-			}
-			Self::JmpIfFalse(_, _, _) | Self::JmpIfFalse(_, _, _) => {
-				std::mem::size_of::<JmpMode>() as u32 * 8 + Address::BITS + Reg::BITS
-			}
-			Self::Add {
-				reg_1: _,
-				reg_2: _,
-				dst: _
-			}
-			| Self::Sub {
-				reg_1: _,
-				reg_2: _,
-				dst: _
-			}
-			| Self::Mul {
-				reg_1: _,
-				reg_2: _,
-				dst: _
-			}
-			| Self::Div {
-				reg_1: _,
-				reg_2: _,
-				dst: _
-			}
-			| Self::Call(_, _, _) => 3 * Reg::BITS,
-			Self::LoadF(_, _) => Reg::BITS + u16::BITS,
-			Self::Clock(_) | Self::Pop(_) | Self::Push(_) | Self::LoadTrue(_) | Self::LoadFalse(_) => Reg::BITS,
-			Self::LoadFloat(_, _) => Reg::BITS + 64, // f64
-			// Self::GetArg(_, _) => Reg::BITS + u8::BITS,
-			_ => 0
-		};
-		assert!(to_add % 8 == 0);
-		n += to_add / 8;
-		n as usize
-	}
 }
