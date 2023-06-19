@@ -47,20 +47,19 @@ pub struct Vm {
 impl Vm {
 	pub fn new(program: Program) -> Self {
 		assert!(!program.code.is_empty());
-		let mut s = Self {
+		Self {
 			cmp_reg: Ordering::Equal,
 			program,
 			stack: VmStack::new(),
 			call_stack: CallStack::default(),
 			current_frame: std::ptr::null_mut() as *mut CallFrame
-		};
-		s.ensure_register_exists(10); // preallocate 10 registers, as of now, they are not allocated automatically
-		s
+		}
 	}
-
+	
 	// maybe trait
 	pub fn run(&mut self) {
 		self.update_current_frame();
+		self.stack.preallocate(&[StackValue::Int(0); 150]); // preallocate 10 registers, as of now, they are not allocated automatically
 		unsafe {
 			(*self.current_frame).pc = self.program.code.as_ptr();
 			(*self.current_frame).base = self.program.code.as_ptr();
@@ -71,9 +70,9 @@ impl Vm {
 			let op = unsafe { op.cast::<Opcode>().read_unaligned() };
 
 			// println!("{:?}", self.program);
-			let depth = "|".repeat(self.call_stack.len() - 1);
-			println!("{} {op:?}", depth);
-			println!("{} {}\n", depth, unsafe { (*self.current_frame).pc() });
+			//let depth = "|".repeat(self.call_stack.len() - 1);
+			//println!("{} {op:?}", depth);
+			//println!("{} {}\n", depth, unsafe { (*self.current_frame).pc() });
 
 			self.increment_pc();
 			match op {
@@ -91,10 +90,42 @@ impl Vm {
 					self.set_register(dst, self.get_register(src));
 				}
 				Opcode::Jmp => self.jump(|_| true),
-				Opcode::Jlt => self.jump(Ordering::is_lt),
-				Opcode::Jle => self.jump(Ordering::is_le),
-				Opcode::Jgt => self.jump(Ordering::is_gt),
-				Opcode::Jge => self.jump(Ordering::is_ge),
+				Opcode::JmpIfTrue => {
+					let mode = self.read_u8();
+					let mode = std::ptr::addr_of!(mode);
+					let mode = unsafe { mode.cast::<JmpMode>().read_unaligned() };
+					
+					let reg = self.read_reg();
+					let val = self.get_register(reg);
+					let StackValue::Bool(cond) = val else { panic!("only bools can be used to jump conditionally (true)"); };
+
+					let address = self.read_address();
+					if cond {
+						match mode {
+							JmpMode::Absolute => self.set_pc(address as usize),
+							JmpMode::RelativeBackward => self.remove_from_pc(address as usize),
+							JmpMode::RelativeForward => self.add_to_pc(address as usize)
+						}
+					}
+				},
+				Opcode::JmpIfFalse => {
+					let mode = self.read_u8();
+					let mode = std::ptr::addr_of!(mode);
+					let mode = unsafe { mode.cast::<JmpMode>().read_unaligned() };
+					
+					let reg = self.read_reg();
+					let val = self.get_register(reg);
+					let StackValue::Bool(cond) = val else { panic!("only bools can be used to jump conditionally (false)"); };
+
+					let address = self.read_address();
+					if !cond {
+						match mode {
+							JmpMode::Absolute => self.set_pc(address as usize),
+							JmpMode::RelativeBackward => self.remove_from_pc(address as usize),
+							JmpMode::RelativeForward => self.add_to_pc(address as usize)
+						}
+					}
+				},
 				Opcode::Add => self.op(std::ops::Add::add),
 				Opcode::Sub => self.op(std::ops::Sub::sub),
 				Opcode::Mul => self.op(std::ops::Mul::mul),
@@ -141,7 +172,7 @@ impl Vm {
 
 					//let to_add = vec![Register::zero(); arg_count + 5]; // preallocate argcount + 5 registers for the function
 					//self.stack.append(&to_add);
-					self.ensure_register_exists(arg_count as usize + 5);
+					self.ensure_register_exists(arg_count + 5);
 
 					for i in 0..arg_count {
 						let val = self.raw_get_register(base, ra + 1 + i);
@@ -161,7 +192,7 @@ impl Vm {
 						let val = self.raw_get_register(base, ra + i);
 						self.set_register(ret_reg + i, val);
 					}
-					self.stack.remove(self.stack.len() - base);
+					//self.stack.remove(self.stack.len() - base);
 				}
 				Opcode::LoadF => {
 					let reg = self.read_reg();
@@ -207,14 +238,20 @@ impl Vm {
 		self.current_frame = self.call_stack.last_mut() as *mut CallFrame;
 	}
 
-	fn ensure_register_exists(&mut self, reg: usize) {
-		if reg + 1 > self.stack.len() {
-			let to_add = reg + 1 - self.stack.len();
+	fn ensure_register_exists(&mut self, reg: u8) -> usize {
+		let base = (unsafe { *self.current_frame }).reg0_p;
+		let address = base + reg as usize;
+		
+		if address >= self.stack.capacity() {
+			let to_add = address + 1 - self.stack.capacity();
 			let to_add = vec![Register::zero(); to_add];
 			self.stack.append(&to_add);
+		} else {
+			self.stack.top += reg as usize;
 		}
+		address
 	}
-
+	
 	fn get_register(&self, reg: Reg) -> Register {
 		let base = (unsafe { *self.current_frame }).reg0_p;
 		self.raw_get_register(base, reg)
@@ -226,10 +263,8 @@ impl Vm {
 	}
 
 	fn set_register(&mut self, reg: Reg, val: Register) {
-		let base = (unsafe { *self.current_frame }).reg0_p;
-		let reg = base + reg as usize;
+		let reg = self.ensure_register_exists(reg); // TODO: remove that
 
-		self.ensure_register_exists(reg); // TODO: remove that
 		self.stack.set(reg, val);
 	}
 
