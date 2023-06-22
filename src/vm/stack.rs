@@ -79,7 +79,13 @@ impl VmStack {
 		self.stack.extend_from_slice(other);
 	}
 
-	pub fn capacity(&self) -> usize {
+	/// The number of elements currently stored in the vec.
+	/// If preallocation is used, it will not be the same as
+	/// [`Stack::len`]. [`Stack::len`] represents the top of the
+	/// stack (the number of elements stored), while [`VmStack::stored`]
+	/// represents the actual number of allocated elements, even
+	/// those not in use. This is usefull for preallocation.
+	pub fn stored(&self) -> usize {
 		self.stack.len()
 	}
 }

@@ -234,8 +234,8 @@ impl Vm {
 		let base = (unsafe { *self.current_frame }).reg0_p;
 		let address = base + reg as usize;
 
-		if address >= self.stack.capacity() {
-			let to_add = address + 1 - self.stack.capacity();
+		if address >= self.stack.stored() {
+			let to_add = address + 1 - self.stack.stored();
 			let to_add = vec![Register::zero(); to_add];
 			self.stack.append(&to_add);
 		} else if self.stack.top < address {
