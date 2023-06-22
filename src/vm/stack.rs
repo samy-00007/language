@@ -9,7 +9,7 @@ use std::{
 #[derive(Debug)]
 pub struct VmStack {
 	stack: Vec<StackValue>,
-	pub top: usize
+	top: usize
 }
 
 impl Stack for VmStack {
@@ -62,7 +62,6 @@ impl Stack for VmStack {
 	}
 
 	fn reset(&mut self) {
-		self.stack.clear();
 		self.top = 0;
 	}
 }
@@ -79,13 +78,27 @@ impl VmStack {
 		self.stack.extend_from_slice(other);
 	}
 
+	pub fn empty(&mut self) {
+		self.reset();
+		self.stack.clear();
+	}
+
+	pub fn preallocate_up_to(&mut self, n: usize) {
+		if n >= self.capacity() {
+			let to_allocate = n - self.capacity();
+			self.preallocate(vec![StackValue::zero(); to_allocate].as_slice())
+		} else {
+			self.top = n;
+		}
+	}
+
 	/// The number of elements currently stored in the vec.
 	/// If preallocation is used, it will not be the same as
 	/// [`Stack::len`]. [`Stack::len`] represents the top of the
-	/// stack (the number of elements stored), while [`VmStack::stored`]
+	/// stack (the number of elements stored), while [`VmStack::capacity`]
 	/// represents the actual number of allocated elements, even
 	/// those not in use. This is usefull for preallocation.
-	pub fn stored(&self) -> usize {
+	pub fn capacity(&self) -> usize {
 		self.stack.len()
 	}
 }
