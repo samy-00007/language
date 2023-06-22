@@ -89,7 +89,6 @@ pub enum StackValue {
 	Int(Lit),
 	Float(f64),
 	Bool(bool),
-	Address(Address),
 	Function(*const u8) // TODO: type
 }
 
@@ -116,10 +115,10 @@ macro_rules! stack_op {
 		}
 	};
 }
-
+// FIXME: handle overflows
 stack_op!(Add, add, +, false);
 stack_op!(Sub, sub, -, false);
-stack_op!(Mul, mul, -, false);
+stack_op!(Mul, mul, *, false);
 stack_op!(Div, div, /, true);
 
 impl StackValue {
