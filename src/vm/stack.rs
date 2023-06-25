@@ -17,47 +17,64 @@ impl Stack for VmStack {
 	type Value = StackValue;
 
 	fn append(&mut self, other: &[Self::Value]) {
+		let range = self.top..self.top + other.len();
 		self.top += other.len();
-		self.stack.append(&mut other.to_vec());
+
+		if range.end > self.capacity() {
+			self.preallocate_up_to(range.end);
+		}
+
+		// self.stack.append(&mut other.to_vec());
+		self.stack.splice(range, other.to_owned());
 	}
 
 	fn push(&mut self, val: Self::Value) {
+		self.stack.insert(self.top, val);
 		self.top += 1;
-		self.stack.push(val);
 	}
 
 	fn pop(&mut self) -> Self::Value {
+		#[cfg(debug_assertions)]
+		assert!(self.top > 0, "Attempted to pop from empty VmStack");
+
 		self.top -= 1;
-		self.stack.pop().unwrap()
+		*self.stack.get(self.top).unwrap()
 	}
 
 	fn get(&self, i: usize) -> Self::Value {
+		#[cfg(debug_assertions)]
+		assert!(i < self.top, "Attempted to access uninitialized value (VmStack)");
+
 		*self.stack.get(i).unwrap()
 	}
 
 	fn get_mut(&mut self, i: usize) -> &mut Self::Value {
+		#[cfg(debug_assertions)]
+		assert!(i < self.top, "Attempted to access uninitialized value (VmStack)");
+
 		self.stack.get_mut(i).unwrap()
 	}
 
 	fn set(&mut self, i: usize, val: Self::Value) {
+		#[cfg(debug_assertions)]
+		assert!(i < self.top, "Attempted to access uninitialized value (VmStack)");
+
 		*self.stack.get_mut(i).unwrap() = val;
 	}
 
 	fn last(&self) -> Self::Value {
-		*self.stack.last().unwrap()
+		*self.stack.get(self.top - 1).unwrap()
 	}
 
 	fn last_mut(&mut self) -> &mut Self::Value {
-		self.stack.last_mut().unwrap()
+		self.stack.get_mut(self.top - 1).unwrap()
 	}
 
 	fn len(&self) -> usize {
-		//self.stack.len()
 		self.top
 	}
 
 	fn remove(&mut self, n: usize) {
-		//self.stack.truncate(self.len() - n); // TODO: fix that
 		self.top -= n;
 	}
 
@@ -87,7 +104,7 @@ impl VmStack {
 		if n >= self.capacity() {
 			let to_allocate = n - self.capacity();
 			self.preallocate(vec![StackValue::zero(); to_allocate].as_slice())
-		} else {
+		} else if n > self.top {
 			self.top = n;
 		}
 	}
