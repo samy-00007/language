@@ -49,7 +49,7 @@ impl Vm {
 	// maybe trait
 	pub fn run(&mut self) {
 		self.update_current_frame();
-		self.stack.preallocate(&[StackValue::Int(0); 150]); // preallocate 10 registers, as of now, they are not allocated automatically
+		self.stack.preset_up_to(150); // preallocate 10 registers, as of now, they are not allocated automatically
 		unsafe {
 			(*self.current_frame).pc = self.program.code.as_ptr();
 			(*self.current_frame).base = self.program.code.as_ptr();

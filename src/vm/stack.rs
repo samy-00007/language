@@ -6,10 +6,11 @@ use std::{
 	ops::{Add, Div, Mul, Sub}
 };
 
+const VM_STACK_DEFAULT_CAPACITY: usize = 2048;
+
 #[derive(Debug)]
 pub struct VmStack {
-	stack: Vec<StackValue>,
-	top: usize
+	stack: Vec<StackValue>
 }
 
 impl Stack for VmStack {
@@ -17,106 +18,73 @@ impl Stack for VmStack {
 	type Value = StackValue;
 
 	fn append(&mut self, other: &[Self::Value]) {
-		let range = self.top..self.top + other.len();
-		self.top += other.len();
-
-		if range.end > self.capacity() {
-			self.preallocate_up_to(range.end);
-		}
-
-		// self.stack.append(&mut other.to_vec());
-		self.stack.splice(range, other.to_owned());
+		self.stack.append(&mut other.to_owned());
 	}
 
 	fn push(&mut self, val: Self::Value) {
-		self.stack.insert(self.top, val);
-		self.top += 1;
+		self.stack.push(val);
 	}
 
 	fn pop(&mut self) -> Self::Value {
-		#[cfg(debug_assertions)]
-		assert!(self.top > 0, "Attempted to pop from empty VmStack");
-
-		self.top -= 1;
-		*self.stack.get(self.top).unwrap()
+		self.stack.pop().unwrap()
 	}
 
 	fn get(&self, i: usize) -> Self::Value {
-		#[cfg(debug_assertions)]
-		assert!(i < self.top, "Attempted to access uninitialized value (VmStack)");
-
 		*self.stack.get(i).unwrap()
 	}
 
 	fn get_mut(&mut self, i: usize) -> &mut Self::Value {
-		#[cfg(debug_assertions)]
-		assert!(i < self.top, "Attempted to access uninitialized value (VmStack)");
-
 		self.stack.get_mut(i).unwrap()
 	}
 
 	fn set(&mut self, i: usize, val: Self::Value) {
-		#[cfg(debug_assertions)]
-		assert!(i < self.top, "Attempted to access uninitialized value (VmStack)");
-
-		*self.stack.get_mut(i).unwrap() = val;
+		*self.stack.get_mut(i).unwrap() = val; // maybe use insert
 	}
 
 	fn last(&self) -> Self::Value {
-		*self.stack.get(self.top - 1).unwrap()
+		*self.stack.last().unwrap()
 	}
 
 	fn last_mut(&mut self) -> &mut Self::Value {
-		self.stack.get_mut(self.top - 1).unwrap()
+		self.stack.last_mut().unwrap()
 	}
 
+	#[inline]
 	fn len(&self) -> usize {
-		self.top
+		self.stack.len()
 	}
 
 	fn remove(&mut self, n: usize) {
-		self.top -= n;
+		self.stack.truncate(self.len() - n);
 	}
 
 	fn reset(&mut self) {
-		self.top = 0;
+		self.stack.clear();
 	}
 }
 
 impl VmStack {
-	pub const fn new() -> Self {
+	pub fn new() -> Self {
 		Self {
-			stack: Vec::new(),
-			top: 0
+			stack: Vec::with_capacity(VM_STACK_DEFAULT_CAPACITY)
 		}
 	}
 
-	pub fn preallocate(&mut self, other: &[StackValue]) {
-		self.stack.extend_from_slice(other);
+	pub fn preallocate(&mut self, n: usize) {
+		self.stack.reserve(n);
 	}
-
-	pub fn empty(&mut self) {
-		self.reset();
-		self.stack.clear();
-	}
-
+	
 	pub fn preallocate_up_to(&mut self, n: usize) {
-		if n >= self.capacity() {
-			let to_allocate = n - self.capacity();
-			self.preallocate(vec![StackValue::zero(); to_allocate].as_slice())
-		} else if n > self.top {
-			self.top = n;
-		}
+		if n >= self.stack.capacity() {
+			self.stack.reserve( self.stack.capacity() - n);
+		} 
 	}
 
-	/// The number of elements currently stored in the vec.
-	/// If preallocation is used, it will not be the same as
-	/// [`Stack::len`]. [`Stack::len`] represents the top of the
-	/// stack (the number of elements stored), while [`VmStack::capacity`]
-	/// represents the actual number of allocated elements, even
-	/// those not in use. This is usefull for preallocation.
-	pub fn capacity(&self) -> usize {
-		self.stack.len()
+	pub fn preset_up_to(&mut self, n: usize) {
+		let n = n + 1;
+		if n >= self.len() {
+			self.stack.resize_with(n, Default::default)
+		}
 	}
 }
 
@@ -176,6 +144,12 @@ impl StackValue {
 
 	pub const fn zero() -> Self {
 		Self::Int(0)
+	}
+}
+
+impl Default for StackValue {
+	fn default() -> Self {
+		Self::zero()
 	}
 }
 
