@@ -1,12 +1,10 @@
-use crate::{match_infix_op, match_infix_op_lit, parser::ast::Prefix};
+use crate::{match_infix_op, match_infix_op_lit};
 
 use super::{assembler::Assembler, env::Env};
-use crate::{
-	parser::ast::{Argument, Expr, Item, Literal, Operator, Stmt, Ty},
-	vm::{
+use language_ast::{Argument, Expr, Item, Literal, Operator, Stmt, Ty, Prefix};
+use language_engine::vm::{
 		instructions::{Address, Instr, JmpMode, Reg},
 		program::Program
-	}
 };
 
 #[derive(Debug)]
@@ -282,7 +280,7 @@ impl Compiler {
 		}
 	}
 
-	fn compile_function(&mut self, name: String, args: Vec<Argument>, ty: Ty, block: Vec<Stmt>) {
+	fn compile_function(&mut self, name: String, args: Vec<Argument>, _ty: Ty, block: Vec<Stmt>) {
 		let mut f = Self::new();
 		let i = u16::try_from(self.assembler.program.functions.len())
 			.expect("More than 2^16 - 1 (u16) functions");
@@ -328,7 +326,7 @@ impl Compiler {
 	pub fn new() -> Self {
 		Self {
 			assembler: Assembler::new(),
-			env: Env::new()
+			env: Env::default()
 		}
 	}
 }

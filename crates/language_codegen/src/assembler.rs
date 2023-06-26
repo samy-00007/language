@@ -1,4 +1,4 @@
-use crate::vm::{instructions::Instr, program::Program};
+use language_engine::vm::{instructions::Instr, program::Program};
 
 #[derive(Debug)]
 pub struct Assembler {

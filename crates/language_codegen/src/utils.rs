@@ -1,5 +1,4 @@
-use crate::parser::ast::{Literal, Ty};
-use std::ops::{Add, Div, Mul, Sub};
+use language_ast::Ty;
 
 #[derive(Debug)]
 pub struct Var {
@@ -63,32 +62,3 @@ macro_rules! match_infix_op_lit {
 		}
 	};
 }
-
-macro_rules! literal_op {
-	($trait:ident, $name:ident, $op:tt, $all_floats:literal) => {
-		impl $trait for Literal {
-			type Output = Self;
-
-			fn $name(self, rhs: Self) -> Self::Output {
-				match self {
-					Self::Int(x) => match rhs {
-						Self::Int(y) => if $all_floats { Self::Float(x as f64 $op y as f64) } else { Self::Int(x $op y) },
-						Self::Float(y) => Self::Float(x as f64 $op y),
-						_ => unreachable!()
-					},
-					Self::Float(x) => match rhs {
-						Self::Float(y) => Self::Float(x $op y),
-						Self::Int(y) => Self::Float(x $op y as f64),
-						_ => unreachable!()
-					},
-					_ => unreachable!()
-				}
-			}
-		}
-	};
-}
-
-literal_op!(Add, add, +, false);
-literal_op!(Sub, sub, -, false);
-literal_op!(Mul, mul, -, false);
-literal_op!(Div, div, /, true);

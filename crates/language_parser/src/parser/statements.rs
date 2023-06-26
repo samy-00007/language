@@ -31,7 +31,7 @@ where
 		}
 	}
 
-	fn parse_generics(&mut self) -> Vec<Generic> {
+	fn _parse_generics(&mut self) -> Vec<Generic> {
 		self.parse_l(Token::RChevron, |this| {
 			let name = this.get_ident();
 			let mut traits = Vec::new();

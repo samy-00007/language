@@ -134,7 +134,7 @@ impl CallFrame {
 	}
 
 	#[inline]
-	pub const unsafe fn pc(&self) -> usize {
+	pub const unsafe fn _pc(&self) -> usize {
 		self.pc.offset_from(self.base) as usize
 	}
 

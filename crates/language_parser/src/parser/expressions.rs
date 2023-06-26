@@ -70,7 +70,7 @@ where
 	/// It does not consume `end_token`
 	///
 	/// Example of list that it parses:
-	/// ```
+	/// ```ignore
 	/// // self.parse_list(true, Token::RParen)
 	/// ident1: type1, ident2: type2, ident3: type3
 	///
@@ -129,8 +129,8 @@ where
 			} else if Self::is_op(next) {
 				let expr = self.parse_expression(50); // arbitrary, just to only apply the prefix to the next literal
 				let op: Operator = next.into();
-				let op = op.try_into().unwrap_or_else(|e| {
-					self.push_error(e);
+				let op = op.try_into().unwrap_or_else(|e: Operator| {
+					self.push_error(ParseError::UnexpectedToken(e.into()));
 					Prefix::Err
 				});
 				Expr::Prefix(op, Box::new(expr))

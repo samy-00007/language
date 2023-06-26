@@ -1,4 +1,4 @@
-use crate::vm::instructions::Reg;
+use language_engine::vm::instructions::Reg;
 use std::collections::HashMap;
 
 use super::utils::*;
@@ -10,14 +10,17 @@ pub struct Env {
 	last_reg: Reg
 }
 
-impl Env {
-	pub fn new() -> Self {
+impl Default for Env {
+	fn default() -> Self {
 		Self {
 			variables: HashMap::new(),
 			last_reg: 0,
 			functions: HashMap::new()
 		}
 	}
+}
+
+impl Env {
 
 	pub fn allocate_reg(&mut self) -> Reg {
 		assert!(self.last_reg < Reg::MAX);

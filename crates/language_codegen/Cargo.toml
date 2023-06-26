@@ -5,7 +5,11 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[dependencies]
+[dependencies.language_engine]
+path = "../language_engine"
+
+[dependencies.language_ast]
+path = "../language_ast"
 
 [dev-dependencies]
 pretty_assertions = "1.3.0"

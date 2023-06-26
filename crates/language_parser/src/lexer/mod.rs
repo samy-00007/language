@@ -1,4 +1,5 @@
 use logos::{FilterResult, Lexer, Logos};
+use language_ast::Operator;
 
 #[derive(Logos, Debug, PartialEq, Eq, Clone, Copy)]
 #[logos(skip r"[ \t\n]+")]
@@ -169,6 +170,103 @@ fn block_comment(lex: &mut Lexer<Token>) -> FilterResult<(), ()> {
 		}
 	}
 }
+
+impl From<Token> for Operator {
+	fn from(value: Token) -> Self {
+		match value {
+			Token::Eq => Self::Assign,
+
+			Token::Plus => Self::Add,
+			Token::PlusEq => Self::AddEq,
+			Token::Minus => Self::Sub,
+			Token::MinusEq => Self::SubEq,
+			Token::Asterisk => Self::Mul,
+			Token::AsteriskEq => Self::MulEq,
+			Token::DoubleAsterisk => Self::Exponent,
+			Token::DoubleAsteriskEq => Self::ExponentEq,
+			Token::Slash => Self::Div,
+			Token::SlashEq => Self::DivEq,
+			Token::Percent => Self::Rem,
+			Token::PercentEq => Self::RemEq,
+			Token::ExclamationMark => Self::Not,
+
+			Token::Tilde => Self::BitNot,
+			Token::TildeEq => Self::BitNotEq,
+			Token::Anpersand => Self::BitAnd,
+			Token::AnpersandEq => Self::BitAndEq,
+			Token::Bar => Self::BitOr,
+			Token::BarEq => Self::BitOrEq,
+			Token::Caret => Self::BitXor,
+			Token::CaretEq => Self::BitXorEq,
+			Token::LShift => Self::LShift,
+			Token::LShiftEq => Self::LShiftEq,
+			Token::RShift => Self::RShift,
+			Token::RShiftEq => Self::RShiftEq,
+
+			Token::DoubleEq => Self::Eq,
+			Token::Gte => Self::Gte,
+			Token::Lte => Self::Lte,
+			Token::Neq => Self::Neq,
+			Token::And => Self::And,
+			Token::AndEq => Self::AndEq,
+			Token::Or => Self::Or,
+			Token::OrEq => Self::OrEq,
+			Token::RChevron => Self::Gt,
+			Token::LChevron => Self::Lt,
+			_ => unreachable!()
+		}
+	}
+}
+
+
+
+
+impl From<Operator> for Token {
+	fn from(value: Operator) -> Self {
+		match value {
+			Operator::Assign => Self::Eq,
+
+			Operator::Add => Self::Plus,
+			Operator::AddEq => Self::PlusEq,
+			Operator::Sub => Self::Minus,
+			Operator::SubEq => Self::MinusEq,
+			Operator::Mul => Self::Asterisk,
+			Operator::MulEq => Self::AsteriskEq,
+			Operator::Exponent => Self::DoubleAsterisk,
+			Operator::ExponentEq => Self::DoubleAsteriskEq,
+			Operator::Div => Self::Slash,
+			Operator::DivEq => Self::SlashEq,
+			Operator::Rem => Self::Percent,
+			Operator::RemEq => Self::PercentEq,
+			Operator::Not => Self::ExclamationMark,
+
+			Operator::BitNot => Self::Tilde,
+			Operator::BitNotEq => Self::TildeEq,
+			Operator::BitAnd => Self::Anpersand,
+			Operator::BitAndEq => Self::AnpersandEq,
+			Operator::BitOr => Self::Bar,
+			Operator::BitOrEq => Self::BarEq,
+			Operator::BitXor => Self::Caret,
+			Operator::BitXorEq => Self::CaretEq,
+			Operator::LShift => Self::LShift,
+			Operator::LShiftEq => Self::LShiftEq,
+			Operator::RShift => Self::RShift,
+			Operator::RShiftEq => Self::RShiftEq,
+
+			Operator::Eq => Self::DoubleEq,
+			Operator::Gte => Self::Gte,
+			Operator::Lte => Self::Lte,
+			Operator::Neq => Self::Neq,
+			Operator::And => Self::And,
+			Operator::AndEq => Self::AndEq,
+			Operator::Or => Self::Or,
+			Operator::OrEq => Self::OrEq,
+			Operator::Gt => Self::RChevron,
+			Operator::Lt => Self::LChevron
+		}
+	}
+}
+
 
 // TODO: add more tests
 #[cfg(test)]

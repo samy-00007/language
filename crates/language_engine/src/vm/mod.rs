@@ -3,7 +3,7 @@
 mod callstack;
 pub mod instructions;
 pub mod program;
-mod stack;
+pub mod stack;
 
 use callstack::{CallFrame, CallStack, CALL_STACK_SIZE};
 use instructions::{Address, JmpMode, Lit, Opcode, Reg, StackValue, VmStack};

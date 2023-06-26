@@ -1,5 +1,5 @@
 #![allow(clippy::module_name_repetitions)]
-use super::{Address, Lit};
+use super::Lit;
 use crate::utils::stack::Stack;
 use std::{
 	cmp::Ordering,
