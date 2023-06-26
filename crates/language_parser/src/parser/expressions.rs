@@ -1,4 +1,5 @@
-use super::ast::{Argument, Block, Expr, Literal, Operator, ParseError, Prefix, Stmt};
+use language_ast::{Argument, Block, Expr, Literal, Operator, Prefix, Stmt};
+use crate::error::ParseError;
 use super::{Parser, RetItem};
 use crate::lexer::Token;
 
@@ -172,12 +173,11 @@ mod tests {
 	use pretty_assertions::assert_eq;
 	use std::vec;
 
+	use language_ast::{Argument, Expr, Literal, Operator, Prefix, Stmt, Ty};
 	use crate::{
 		lexer::Token,
-		parser::{
-			ast::{Argument, Expr, Literal, Operator, ParseError, Prefix, Stmt, Ty},
-			Parser
-		}
+		parser::Parser,
+		error::ParseError
 	};
 
 	#[test]

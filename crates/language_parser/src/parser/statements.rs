@@ -1,4 +1,5 @@
-use super::ast::{Expr, Generic, ParseError, Stmt};
+use language_ast::{Expr, Generic, Stmt};
+use crate::error::ParseError;
 use super::{Parser, RetItem};
 use crate::lexer::Token;
 
@@ -112,10 +113,8 @@ where
 
 #[cfg(test)]
 mod tests {
-	use crate::parser::{
-		ast::{Expr, Literal, Operator, Stmt, Ty},
-		Parser
-	};
+	use language_ast::{Expr, Literal, Operator, Stmt, Ty};
+	use crate::parser::Parser;
 	use pretty_assertions::assert_eq;
 
 	#[test]

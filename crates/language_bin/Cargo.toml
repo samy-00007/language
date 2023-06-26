@@ -1,0 +1,22 @@
+[package]
+name = "language_bin"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies.language_parser]
+path = "../language_parser"
+
+[dependencies.language_engine]
+path = "../language_engine"
+
+[dependencies.language_codegen]
+path = "../language_codegen"
+
+
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"

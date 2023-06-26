@@ -3,17 +3,9 @@
 #![allow(clippy::inline_always)]
 #![feature(core_intrinsics)]
 
-mod codegen;
-mod lexer;
-mod parser;
-mod utils;
-mod vm;
-
-// use parser::Parser;
-
-use crate::parser::Parser;
-use codegen::compiler::Compiler;
-use vm::Vm;
+use language_parser::parser::Parser;
+use language_codegen::compiler::Compiler;
+use language_engine::vm::Vm;
 
 // #![feature(test)]
 // mod bench;

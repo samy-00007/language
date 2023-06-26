@@ -1,4 +1,3 @@
-pub mod ast;
 mod expressions;
 mod item;
 mod statements;
@@ -7,7 +6,8 @@ use crate::lexer::Token;
 use logos::{Logos, SpannedIter};
 use std::{iter::Peekable, ops::Range};
 
-use self::ast::{Block, Operator, ParseError, Ty};
+use language_ast::{Block, Operator, Ty};
+use crate::error::ParseError;
 
 pub type RetItem = (Result<Token, ()>, Range<usize>);
 pub type IteratorItem = (Token, Range<usize>);

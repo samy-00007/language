@@ -2,11 +2,10 @@ use std::fmt::Display;
 
 //use f128::f128;
 
-use crate::lexer::Token;
 // https://github.com/Rydgel/monkey-rust/blob/master/lib/parser/ast.rs
 
 type E = Box<Expr>;
-pub(super) type Block = Vec<Stmt>;
+pub type Block = Vec<Stmt>;
 
 /*
 #[derive(Eq, PartialEq, Clone, Copy, Hash, Default, Debug)]
@@ -161,21 +160,6 @@ pub enum Operator {
 	Or,
 	OrEq
 }
-
-#[derive(Debug, PartialEq, Clone)]
-#[allow(dead_code)]
-pub enum ParseError {
-	UnexpectedEOF,
-	UnexpectedToken(Token), // TODO: maybe store the token text ?
-	ExpectedTokenButFoundInstead { expected: Token, found: Token },
-	ExpectedTokenButNotFound(Token),
-	ExpectedExprButFoundInstead { expected: Expr, found: Expr },
-	ExpectedExprButNotFound(Expr),
-	IntParseError(String),
-	FloatParseError(String),
-	NoImplicitTypeAllowed
-}
-
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Generic {
 	pub name: String,
@@ -187,7 +171,7 @@ pub struct Argument {
 	pub name: String,
 	pub ty: Ty
 }
-
+/*
 //
 
 impl Display for Stmt {
@@ -483,3 +467,4 @@ fn print_s<T: Display>(vec: &[T], sep: &str) -> String {
 		.collect::<Vec<String>>()
 		.join(sep)
 }
+*/
