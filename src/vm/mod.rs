@@ -40,7 +40,7 @@ impl Vm {
 		Self {
 			cmp_reg: Ordering::Equal,
 			program,
-			stack: VmStack::new(),
+			stack: VmStack::default(),
 			call_stack: CallStack::default(),
 			current_frame: std::ptr::null_mut() as *mut CallFrame
 		}

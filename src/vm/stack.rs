@@ -66,7 +66,7 @@ impl Stack for VmStack {
 impl VmStack {
 	pub fn new() -> Self {
 		Self {
-			stack: Vec::with_capacity(VM_STACK_DEFAULT_CAPACITY)
+			stack: Vec::new()
 		}
 	}
 
@@ -74,16 +74,27 @@ impl VmStack {
 		self.stack.reserve(n);
 	}
 	
+	// n included
 	pub fn preallocate_up_to(&mut self, n: usize) {
-		if n >= self.stack.capacity() {
-			self.stack.reserve( self.stack.capacity() - n);
+		let n = n + 1;
+		if n > self.stack.capacity() {
+			self.stack.reserve(n - self.stack.capacity());
 		} 
 	}
 
+	// n included
 	pub fn preset_up_to(&mut self, n: usize) {
 		let n = n + 1;
-		if n >= self.len() {
+		if n > self.len() {
 			self.stack.resize_with(n, Default::default)
+		}
+	}
+}
+
+impl Default for VmStack {
+	fn default() -> Self {
+		Self {
+			stack: Vec::with_capacity(VM_STACK_DEFAULT_CAPACITY)
 		}
 	}
 }
