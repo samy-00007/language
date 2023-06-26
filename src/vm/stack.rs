@@ -174,3 +174,145 @@ pub fn cmp(a: f64, b: f64) -> Ordering {
 		Ordering::Less
 	}
 }
+
+
+#[cfg(test)]
+mod tests {
+	use crate::utils::stack::Stack;
+	use super::{StackValue, VmStack};
+	use pretty_assertions::assert_eq;
+
+
+	#[test]
+	fn vm_stack() {
+		let mut stack = VmStack::new();
+
+		assert_eq!(stack.len(), 0);
+		
+		let dummy = StackValue::zero();
+		stack.push(dummy);		
+		assert_eq!(stack.len(), 1);
+		
+		let vec = (1..=10).collect::<Vec<_>>();
+		assert_eq!(vec, vec![1,2,3,4,5,6,7,8,9,10]);
+
+		let vec = vec.into_iter().map(|x| StackValue::Int(x as i64)).collect::<Vec<StackValue>>();
+
+		stack.append(&vec);
+		assert_eq!(stack.len(), 11);
+
+		stack.preallocate_up_to(10);
+		assert_eq!(stack.len(), 11);
+		assert!(stack.stack.capacity() >= 11);
+
+		stack.preallocate_up_to(15);
+		assert_eq!(stack.len(), 11);
+		assert!(stack.stack.capacity() >= 16);
+
+		
+		
+		assert_eq!(stack.pop(), StackValue::Int(10));
+		assert_eq!(stack.len(), 10);
+		
+
+		stack.remove(2);
+		assert_eq!(stack.len(), 8);
+
+		assert_eq!(stack.get(3), StackValue::Int(3));
+		
+		*stack.get_mut(3) = StackValue::Int(9);
+		assert_eq!(stack.get(3), StackValue::Int(9));
+
+	}
+
+
+
+
+	macro_rules! test_op {
+		($op:tt; $t_a:ident, $a:literal; $t_b:ident, $b:literal; $t_e:ident, $e:literal) => {
+			let a = StackValue::$t_a($a);
+			let b = StackValue::$t_b($b);
+
+			let expected = StackValue::$t_e($e);
+
+			pretty_assertions::assert_eq!(a $op b, expected);
+		};
+	}
+
+	macro_rules! test_cmp {
+		($t_a:ident, $a:literal; $t_b:ident, $b:literal; $e:ident) => {
+			let a = StackValue::$t_a($a);
+			let b = StackValue::$t_b($b);
+
+			let expected = std::cmp::Ordering::$e;
+
+			pretty_assertions::assert_eq!(a.cmp(&b), expected);
+		};
+	}
+
+	#[test]
+	fn stack_value_zero() {
+		assert_eq!(StackValue::zero(), StackValue::Int(0));
+	}
+
+	#[test]
+	fn stack_value_op() {
+		test_op!(+; Int, 10; Int, 20; Int, 30);
+		test_op!(+; Int, 500; Int, -20; Int, 480);
+		test_op!(+; Int, 0; Int, 0; Int, 0);
+		test_op!(+; Float, 10.5; Float, 20.5; Float, 31.);
+		test_op!(+; Float, 0.; Float, 0.; Float, 0.);
+		test_op!(+; Float, 10.; Int, 20; Float, 30.);
+
+		test_op!(-; Int, 10; Int, 20; Int, -10);
+		test_op!(-; Int, 500; Int, -20; Int, 520);
+		test_op!(-; Int, 0; Int, 0; Int, 0);
+		test_op!(-; Float, 10.5; Float, 20.5; Float, -10.);
+		test_op!(-; Float, 0.; Float, 0.; Float, 0.);
+		test_op!(-; Float, 10.; Int, 20; Float, -10.);
+
+		test_op!(*; Int, 10; Int, 20; Int, 200);
+		test_op!(*; Int, 500; Int, -20; Int, -10_000);
+		test_op!(*; Int, 0; Int, 0; Int, 0);
+		test_op!(*; Float, 10.5; Float, 20.5; Float, 215.25);
+		test_op!(*; Float, 0.; Float, 0.; Float, 0.);
+		test_op!(*; Float, 10.; Int, 20; Float, 200.);
+
+		test_op!(/; Int, 10; Int, 20; Float, 0.5);
+		test_op!(/; Int, 500; Int, -20; Float, -25.);
+		test_op!(/; Int, 0; Int, 1; Float, 0.);
+		test_op!(/; Float, 10.5; Float, 20.; Float, 0.525);
+		test_op!(/; Float, 0.; Float, 1.; Float, 0.);
+		test_op!(/; Float, 10.; Int, 20; Float, 0.5);
+
+	}
+
+	#[test]
+	fn stack_value_cmp() {
+		test_cmp!(Int, 10; Int, 10; Equal);
+		test_cmp!(Int, -10; Int, 10; Less);
+		test_cmp!(Int, 10; Int, -10; Greater);
+		test_cmp!(Int, 0; Int, 0; Equal);
+		test_cmp!(Int, 10; Float, 10.; Equal);
+		test_cmp!(Float, 10.; Int, 10; Equal);
+		test_cmp!(Int, 10; Float, -10.; Greater);
+		test_cmp!(Float, 10.; Int, -10; Greater);
+		test_cmp!(Float, 10.5; Float, 10.5; Equal);
+		test_cmp!(Float, 10.; Float, 10.5; Less);
+		test_cmp!(Float, -10.; Float, 10.5; Less);
+		test_cmp!(Float, 25.7; Float, 10.; Greater);
+	}
+
+	#[test]
+	#[should_panic]
+	fn stack_value_op_bool() {
+		let _result = StackValue::Bool(true) + StackValue::Bool(true);
+	}
+	
+	#[test]
+	#[should_panic]
+	fn stack_value_op_function() {
+		use std::ptr::null;
+		let _result = StackValue::Function(null()) + StackValue::Function(null());
+	}
+}
