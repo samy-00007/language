@@ -135,6 +135,7 @@ stack_op!(Mul, mul, *, false);
 stack_op!(Div, div, /, true);
 
 impl StackValue {
+	#[allow(clippy::should_implement_trait)]
 	pub fn cmp(self, rhs: &Self) -> Ordering {
 		match self {
 			Self::Int(x) => match rhs {

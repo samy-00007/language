@@ -3,22 +3,14 @@ use std::collections::HashMap;
 
 use super::utils::*;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Env {
 	functions: HashMap<String, u16>,
 	variables: HashMap<String, Var>,
 	last_reg: Reg
 }
 
-impl Default for Env {
-	fn default() -> Self {
-		Self {
-			variables: HashMap::new(),
-			last_reg: 0,
-			functions: HashMap::new()
-		}
-	}
-}
+
 
 impl Env {
 
