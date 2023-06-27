@@ -3,7 +3,7 @@
 use crate::utils::stack::Stack;
 use std::ptr::null;
 
-use super::instructions::Reg;
+use super::opcodes::Reg;
 
 pub const CALL_STACK_SIZE: usize = 256;
 

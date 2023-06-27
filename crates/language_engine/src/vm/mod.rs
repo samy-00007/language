@@ -1,12 +1,14 @@
 #![allow(clippy::cast_lossless)]
 #![allow(clippy::pedantic)]
 mod callstack;
-pub mod instructions;
+// pub mod instructions;
+pub mod opcodes;
 pub mod program;
 pub mod stack;
 
 use callstack::{CallFrame, CallStack, CALL_STACK_SIZE};
-use instructions::{Address, JmpMode, Lit, Opcode, Reg, StackValue, VmStack};
+use opcodes::{Address, Lit, Opcode, Reg};
+use stack::{StackValue, VmStack};
 use program::Program;
 
 use crate::utils::stack::Stack;
@@ -28,7 +30,6 @@ pub type Register = StackValue;
 
 #[derive(Debug)]
 pub struct Vm {
-	cmp_reg: Ordering,
 	program: Program,
 	stack: VmStack,
 	call_stack: CallStack<CALL_STACK_SIZE>,
@@ -39,7 +40,6 @@ impl Vm {
 	pub fn new(program: Program) -> Self {
 		assert!(!program.code.is_empty());
 		Self {
-			cmp_reg: Ordering::Equal,
 			program,
 			stack: VmStack::default(),
 			call_stack: CallStack::default(),
@@ -57,13 +57,7 @@ impl Vm {
 		}
 
 		loop {
-			let op = self.pc();
-			let op = unsafe { op.cast::<Opcode>().read_unaligned() };
-
-			// println!("{:?}", self.program);
-			//let depth = "|".repeat(self.call_stack.len() - 1);
-			//println!("{} {op:?}", depth);
-			//println!("{} {}\n", depth, unsafe { (*self.current_frame).pc() });
+			let op = unsafe {*self.pc() }.into();
 
 			self.increment_pc();
 			match op {
@@ -75,47 +69,28 @@ impl Vm {
 					self.set_register(reg, val);
 				}
 				Opcode::Move => {
-					let src = self.read_reg();
 					let dst = self.read_reg();
+					let src = self.read_reg();
 
 					self.set_register(dst, self.get_register(src));
 				}
-				Opcode::Jmp => self.jump(|_| true),
+				Opcode::Jmp => self.jump(),
 				Opcode::JmpIfTrue => {
-					let mode = self.read_u8();
-					let mode = std::ptr::addr_of!(mode);
-					let mode = unsafe { mode.cast::<JmpMode>().read_unaligned() };
-
 					let reg = self.read_reg();
 					let val = self.get_register(reg);
-					let StackValue::Bool(cond) = val else { panic!("only bools can be used to jump conditionally (true)"); };
 
-					let address = self.read_address();
-					if cond {
-						match mode {
-							JmpMode::Absolute => self.set_pc(address as usize),
-							JmpMode::RelativeBackward => self.remove_from_pc(address as usize),
-							JmpMode::RelativeForward => self.add_to_pc(address as usize)
-						}
-					}
+					if val == StackValue::Bool(true) {
+						self.jump();
+					} 
 				}
 				Opcode::JmpIfFalse => {
-					let mode = self.read_u8();
-					let mode = std::ptr::addr_of!(mode);
-					let mode = unsafe { mode.cast::<JmpMode>().read_unaligned() };
-
 					let reg = self.read_reg();
 					let val = self.get_register(reg);
-					let StackValue::Bool(cond) = val else { panic!("only bools can be used to jump conditionally (false)"); };
-
-					let address = self.read_address();
-					if !cond {
-						match mode {
-							JmpMode::Absolute => self.set_pc(address as usize),
-							JmpMode::RelativeBackward => self.remove_from_pc(address as usize),
-							JmpMode::RelativeForward => self.add_to_pc(address as usize)
-						}
-					}
+	
+					if val == StackValue::Bool(false) {
+						self.jump();
+					} 
+					
 				}
 				Opcode::Add => self.op(std::ops::Add::add),
 				Opcode::Sub => self.op(std::ops::Sub::sub),
@@ -127,11 +102,6 @@ impl Vm {
 				Opcode::Mull => self.op_lit(std::ops::Mul::mul),
 				Opcode::Divl => self.op_lit(std::ops::Div::div),
 				Opcode::Ltl => self.cmp_lit(Ordering::Less),
-				Opcode::Cmp => {
-					let reg_1 = self.read_reg();
-					let reg_2 = self.read_reg();
-					self.cmp_reg = self.get_register(reg_1).cmp(&self.get_register(reg_2));
-				}
 				Opcode::Clock => {
 					let now = std::time::SystemTime::now();
 					let since_the_epoch = now
@@ -208,16 +178,6 @@ impl Vm {
 					let val = self.read_float();
 					self.set_register(reg, Register::Float(val));
 				}
-				Opcode::Push => {
-					let reg = self.read_reg();
-					self.stack.push(self.get_register(reg));
-				}
-				Opcode::Pop => {
-					let val = self.stack.pop();
-					let reg = self.read_reg();
-					// println!("[Pop] val: ({val:?}), reg: {reg}");
-					self.set_register(reg, val);
-				}
 				Opcode::Print => {
 					let reg = self.read_reg();
 					let val = self.get_register(reg);
@@ -257,57 +217,48 @@ impl Vm {
 
 	#[inline(always)]
 	fn op(&mut self, op: fn(Register, Register) -> Register) {
+		let dst = self.read_reg();
 		let reg_1 = self.read_reg();
 		let reg_2 = self.read_reg();
-		let dst = self.read_reg();
 
 		self.set_register(dst, op(self.get_register(reg_1), self.get_register(reg_2))); // TODO: handle overflow
 	}
 
 	#[inline(always)]
 	fn cmp(&mut self, ord: Ordering) {
+		let dst = self.read_reg();
 		let reg_1 = self.read_reg();
 		let reg_2 = self.read_reg();
-		let dst = self.read_reg();
 
 		let cmp = self.get_register(reg_1).cmp(&self.get_register(reg_2));
 
-		self.set_register(dst, StackValue::Bool(cmp == ord)); // TODO: handle overflow
+		self.set_register(dst, StackValue::Bool(cmp == ord));
 	}
 
 	#[inline(always)]
 	fn cmp_lit(&mut self, ord: Ordering) {
+		let dst = self.read_reg();
 		let reg_1 = self.read_reg();
 		let val = self.read_lit();
-		let dst = self.read_reg();
 
 		let cmp = self.get_register(reg_1).cmp(&StackValue::Int(val));
 
-		self.set_register(dst, StackValue::Bool(cmp == ord)); // TODO: handle overflow
+		self.set_register(dst, StackValue::Bool(cmp == ord));
 	}
 
 	#[inline(always)]
 	fn op_lit(&mut self, op: fn(Register, Register) -> Register) {
+		let dst = self.read_reg();
 		let reg_1 = self.read_reg();
 		let val = self.read_lit();
-		let dst = self.read_reg();
 
 		self.set_register(dst, op(self.get_register(reg_1), StackValue::Int(val))); // TODO: handle overflow
 	}
 
 	#[inline]
-	fn jump(&mut self, cond: fn(Ordering) -> bool) {
-		let mode = self.read_u8();
-		let mode = std::ptr::addr_of!(mode);
-		let mode = unsafe { mode.cast::<JmpMode>().read_unaligned() };
+	fn jump(&mut self) {
 		let address = self.read_address();
-		if cond(self.cmp_reg) {
-			match mode {
-				JmpMode::Absolute => self.set_pc(address as usize),
-				JmpMode::RelativeBackward => self.remove_from_pc(address as usize),
-				JmpMode::RelativeForward => self.add_to_pc(address as usize)
-			}
-		}
+		self.set_pc(address as usize);
 	}
 
 	#[inline(always)]
