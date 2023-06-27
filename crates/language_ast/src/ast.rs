@@ -67,7 +67,7 @@ pub enum Expr {
 	Ident(String),
 	Lit(Literal),
 	Prefix(Prefix, E),
-	Infix { op: Operator, lhs: E, rhs: E },
+	Infix { op: Operator, lhs: E, rhs: E }, // maybe Infix(Operator, Box<[Expr; 2]>)
 	Block(Block), // FIXME: handle statements in there
 	FnCall { expr: E, args: Vec<Expr> },
 	FnNamedCall { name: String, args: Vec<Expr> },
