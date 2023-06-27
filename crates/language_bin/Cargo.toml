@@ -13,10 +13,3 @@ path = "../language_engine"
 
 [dependencies.language_codegen]
 path = "../language_codegen"
-
-
-
-[profile.release]
-lto = true
-codegen-units = 1
-panic = "abort"
