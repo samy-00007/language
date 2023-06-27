@@ -56,6 +56,22 @@ generate_impl! {
 		///
 		/// operands: `Reg`, `Lit`
 		Load,
+		/// Loads `true` in the first operand.
+		///
+		/// operands: `Reg`
+		LoadTrue,
+		/// Loads `false` in the first operand.
+		///
+		/// operands: `Reg`
+		LoadFalse,
+		/// Loads the second operand as a float in the first operand.
+		///
+		/// operands: `Reg`, `f64`
+		LoadFloat,
+		/// Loads the function in the second operand into the first operand.
+		///
+		/// operands: `Reg`, `u16`
+		LoadF,
 		/// Copies the value in the second operand into the first.
 		///
 		/// operands: `Reg`, `Reg`
@@ -126,22 +142,6 @@ generate_impl! {
 		///
 		/// operands: `Reg`, `u8`
 		Ret,
-		/// Loads the function in the second operand into the first operand.
-		///
-		/// operands: `Reg`, `u16`
-		LoadF,
-		/// Loads `true` in the first operand.
-		///
-		/// operands: `Reg`
-		LoadTrue,
-		/// Loads `false` in the first operand.
-		///
-		/// operands: `Reg`
-		LoadFalse,
-		/// Loads the second operand as a float in the first operand.
-		///
-		/// operands: `Reg`, `f64`
-		LoadFloat,
 		/// operands: `Reg`
 		Clock,
 		/// operands: `Reg`
