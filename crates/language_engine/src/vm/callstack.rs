@@ -1,34 +1,35 @@
 #![allow(clippy::pedantic)]
 
 use crate::utils::stack::Stack;
-use std::ptr::null;
+use std::cell::RefCell;
 
-use super::opcodes::Reg;
+use super::{opcodes::Reg, program::Program};
 
 pub const CALL_STACK_SIZE: usize = 256;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CallStack<const N: usize> {
-	pub stack: [CallFrame; N],
+	pub stack: [RefCell<CallFrame>; N],
 	pub top: usize
 }
 
 impl<const N: usize> Stack for CallStack<N> {
-	type Value = CallFrame;
+	type Value = RefCell<CallFrame>;
 
 	fn append(&mut self, other: &[Self::Value]) {
+		/*
 		#[cfg(debug_assertions)]
 		assert!(other.len() + self.len() <= N);
 		let len = self.len();
 		self.stack[len..len + other.len()].copy_from_slice(other);
+		*/
+		unimplemented!()
 	}
 
 	fn push(&mut self, val: Self::Value) {
 		#[cfg(debug_assertions)]
 		assert!(self.top < N);
-		unsafe {
-			*self.stack.get_unchecked_mut(self.top) = val;
-		}
+		self.stack[self.top] = val;
 		self.top += 1;
 	}
 
@@ -36,39 +37,45 @@ impl<const N: usize> Stack for CallStack<N> {
 		#[cfg(debug_assertions)]
 		assert!(self.top > 0);
 		self.top -= 1;
-		unsafe { *self.stack.get_unchecked(self.top) }
+		self.stack[self.top].clone()
 	}
 
 	fn get(&self, i: usize) -> Self::Value {
 		#[cfg(debug_assertions)]
-		assert!(i < N);
-		unsafe { *self.stack.get_unchecked(i) }
+		assert!(i < self.top);
+		self.stack[i].clone()
 	}
 
 	fn get_mut(&mut self, i: usize) -> &mut Self::Value {
-		#[cfg(debug_assertions)]
-		assert!(i < N);
-		unsafe { self.stack.get_unchecked_mut(i) }
+		/*#[cfg(debug_assertions)]
+		assert!(i < self.top);
+		self.stack.get_mut(i)*/
+		// we are using refcells, no need for that
+		unimplemented!()
 	}
 
 	fn set(&mut self, i: usize, val: Self::Value) {
-		#[cfg(debug_assertions)]
-		assert!(i < N);
+		/*#[cfg(debug_assertions)]
+		assert!(i < self.top);
 		unsafe {
 			*self.stack.get_unchecked_mut(i) = val;
-		}
+		}*/
+		// same as for `get_mut`
+		unimplemented!()
 	}
 
 	fn last(&self) -> Self::Value {
 		#[cfg(debug_assertions)]
 		assert!(self.top > 0);
-		unsafe { *self.stack.get_unchecked(self.top - 1) }
+		self.stack[self.top - 1].clone()
 	}
 
 	fn last_mut(&mut self) -> &mut Self::Value {
-		#[cfg(debug_assertions)]
+		/*#[cfg(debug_assertions)]
 		assert!(self.top > 0);
-		unsafe { self.stack.get_unchecked_mut(self.top - 1) }
+		unsafe { self.stack.get_unchecked_mut(self.top - 1) }*/
+		//same as for `get_mut` and `set`
+		unimplemented!()
 	}
 
 	fn len(&self) -> usize {
@@ -88,32 +95,57 @@ impl<const N: usize> Stack for CallStack<N> {
 impl<const N: usize> Default for CallStack<N> {
 	fn default() -> Self {
 		Self {
-			stack: [CallFrame::empty(); N],
+			stack: std::array::from_fn(|_| RefCell::new(CallFrame::empty())),
 			top: 1
 		}
 	}
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+impl<const N: usize> CallStack<N> {
+	pub fn new() -> Self {
+		Self {
+			stack: std::array::from_fn(|_| RefCell::new(CallFrame::empty())),
+			top: 0
+		}
+	}
+}
+
+// TODO: maybe impl a Readable trait to standard nums
+macro_rules! read_bytes {
+	($name:ident, $t:tt) => {
+		#[allow(dead_code)]
+		pub fn $name(&mut self) -> $t {
+			let size = std::mem::size_of::<$t>();
+			let bytes = &self.function.code[self.pc..(self.pc + size)];
+			self.pc += size;
+			$t::from_le_bytes(bytes.try_into().unwrap())
+		}
+	};
+}
+
+
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CallFrame {
-	pub base: *const u8,
-	pub pc: *const u8,
-	pub arg_count: u8,
-	pub ret_count: u8,
+	function: Program,
+	pc: usize,
+	arg_count: u8,
+	ret_count: u8,
 	pub reg0_p: usize,
 	pub ret_reg: Reg
 }
 
 impl CallFrame {
 	pub const fn new(
-		pc: *const u8,
+		function: Program,
+		pc: usize,
 		arg_count: u8,
 		ret_count: u8,
 		reg0_p: usize,
 		ret_reg: u8
 	) -> Self {
 		Self {
-			base: pc,
+			function,
 			pc,
 			arg_count,
 			ret_count,
@@ -124,8 +156,8 @@ impl CallFrame {
 
 	pub const fn empty() -> Self {
 		Self {
-			base: null(),
-			pc: null(),
+			function: Program::new(),
+			pc: 0,
 			arg_count: 0,
 			ret_count: 0,
 			reg0_p: 0,
@@ -134,27 +166,66 @@ impl CallFrame {
 	}
 
 	#[inline]
-	pub const unsafe fn _pc(&self) -> usize {
-		self.pc.offset_from(self.base) as usize
+	pub fn pc(&self) -> usize {
+		self.pc
 	}
 
 	#[inline(always)]
-	pub unsafe fn increment_pc(&mut self) {
+	pub fn increment_pc(&mut self) {
 		self.add_to_pc(1);
 	}
 
 	#[inline(always)]
-	pub unsafe fn add_to_pc(&mut self, count: usize) {
-		self.pc = self.pc.add(count);
+	pub fn add_to_pc(&mut self, count: usize) {
+		#[cfg(debug_assertions)]
+		assert!(self.pc.checked_add(count).is_some());
+
+		self.pc += count;
 	}
 
 	#[inline(always)]
-	pub unsafe fn remove_from_pc(&mut self, count: usize) {
-		self.pc = self.pc.sub(count);
+	pub fn remove_from_pc(&mut self, count: usize) {
+		#[cfg(debug_assertions)]
+		assert!(self.pc > count);
+		self.pc -= count;
 	}
 
 	#[inline(always)]
-	pub unsafe fn set_pc(&mut self, count: usize) {
-		self.pc = self.base.add(count);
+	pub fn set_pc(&mut self, count: usize) {
+		self.pc = count;
+	}
+
+	pub fn read_u8(&mut self) -> u8 {
+		let val = self.function.code[self.pc];
+		self.increment_pc();
+		val
+	}
+
+	read_bytes!(read_u16, u16);
+	read_bytes!(read_i16, i16);
+
+	read_bytes!(read_u32, u32);
+	read_bytes!(read_i32, i32);
+
+	read_bytes!(read_u64, u64);
+	read_bytes!(read_i64, i64);
+
+	read_bytes!(read_f64, f64);
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::vm::program::Program;
+
+    use super::CallFrame;
+
+	#[test]
+	fn read_n() {
+		let mut program = Program::new();
+		program.code = vec![0; 20];
+		program.code[0] = 1;
+
+		let mut frame = CallFrame::new(program, 0,0,0,0,0);
+		assert_eq!(frame.read_u8(), 1);
 	}
 }

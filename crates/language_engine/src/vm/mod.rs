@@ -12,19 +12,18 @@ use stack::{StackValue, VmStack};
 use program::Program;
 
 use crate::utils::stack::Stack;
-use std::cmp::Ordering;
+use std::{cmp::Ordering, cell::RefCell};
 
-// check if it as out of bound
-macro_rules! read_bytes {
-	($name:ident, $t:tt, $s:literal) => {
+macro_rules! impl_reads {
+	($name:ident, $t:tt) => {
+		#[inline]
 		#[allow(dead_code)]
 		fn $name(&mut self) -> $t {
-			let val = unsafe { self.pc().cast::<$t>().read_unaligned() };
-			self.add_to_pc($s);
-			val
+			self.current_frame.borrow_mut().$name()
 		}
 	};
 }
+
 
 pub type Register = StackValue;
 
@@ -33,17 +32,21 @@ pub struct Vm {
 	program: Program,
 	stack: VmStack,
 	call_stack: CallStack<CALL_STACK_SIZE>,
-	current_frame: *mut CallFrame
+	current_frame: RefCell<CallFrame>
 }
 
 impl Vm {
 	pub fn new(program: Program) -> Self {
 		assert!(!program.code.is_empty());
+		let mut call_stack = CallStack::new();
+		let root = CallFrame::new(program.clone(), 0, 0, 0, 0, 0);
+		let root = RefCell::new(root);
+		call_stack.push(root.clone());
 		Self {
 			program,
 			stack: VmStack::default(),
-			call_stack: CallStack::default(),
-			current_frame: std::ptr::null_mut() as *mut CallFrame
+			call_stack,
+			current_frame: root
 		}
 	}
 
@@ -51,15 +54,9 @@ impl Vm {
 	pub fn run(&mut self) {
 		self.update_current_frame();
 		self.stack.preset_up_to(150); // preallocate 10 registers, as of now, they are not allocated automatically
-		unsafe {
-			(*self.current_frame).pc = self.program.code.as_ptr();
-			(*self.current_frame).base = self.program.code.as_ptr();
-		}
-
 		loop {
-			let op = unsafe {*self.pc() }.into();
+			let op = self.read_u8().into();
 
-			self.increment_pc();
 			match op {
 				Opcode::Halt => break,
 				Opcode::Nop => {}
@@ -127,10 +124,12 @@ impl Vm {
 						panic!("Expected function to call in register");
 					};
 
-					let base = unsafe { (*self.current_frame).reg0_p }; // TODO: put that in a function
+					let func = self.program.functions[func as usize].clone();
 
-					let frame = CallFrame::new(func, arg_count, ret_count, self.stack.len(), ra);
-					self.call_stack.push(frame);
+					let base = self.current_frame.borrow().reg0_p; // TODO: put that in a function
+
+					let frame = CallFrame::new(func, 0, arg_count, ret_count, self.stack.len(), ra);
+					self.call_stack.push(RefCell::new(frame));
 					self.update_current_frame();
 
 					//let to_add = vec![Register::zero(); arg_count + 5]; // preallocate argcount + 5 registers for the function
@@ -147,6 +146,7 @@ impl Vm {
 					let ret_count = self.read_u8();
 
 					let frame = self.call_stack.pop();
+					let frame = frame.borrow();
 					self.update_current_frame();
 					let base = frame.reg0_p;
 					let ret_reg = frame.ret_reg;
@@ -159,10 +159,10 @@ impl Vm {
 				}
 				Opcode::LoadF => {
 					let reg = self.read_reg();
-					let id = self.read_u16() as usize;
+					let id = self.read_u16();
 					self.set_register(
 						reg,
-						StackValue::Function(self.program.functions[id].code.as_ptr())
+						StackValue::Function(id)
 					);
 				}
 				Opcode::LoadTrue => {
@@ -188,11 +188,11 @@ impl Vm {
 	}
 
 	fn update_current_frame(&mut self) {
-		self.current_frame = self.call_stack.last_mut() as *mut CallFrame;
+		self.current_frame = self.call_stack.last();
 	}
 
 	fn ensure_register_exists(&mut self, reg: u8) -> usize {
-		let base = (unsafe { *self.current_frame }).reg0_p;
+		let base = self.current_frame.borrow().reg0_p;
 		let address = base + reg as usize;
 
 		self.stack.preallocate_up_to(address);
@@ -200,7 +200,7 @@ impl Vm {
 	}
 
 	fn get_register(&self, reg: Reg) -> Register {
-		let base = (unsafe { *self.current_frame }).reg0_p;
+		let base = self.current_frame.borrow().reg0_p;
 		self.raw_get_register(base, reg)
 	}
 
@@ -284,48 +284,21 @@ impl Vm {
 		self.read_u16()
 	}
 
-	#[inline]
-	fn read_u8(&mut self) -> u8 {
-		let v = unsafe { *self.pc() };
-		self.increment_pc();
-		v
-	}
-
-	#[inline]
-	fn pc(&self) -> *const u8 {
-		unsafe { (*self.current_frame).pc }
-	}
-
-	#[inline(always)]
-	fn increment_pc(&mut self) {
-		unsafe {
-			(*self.current_frame).increment_pc();
-		}
-	}
-
-	#[inline(always)]
-	fn add_to_pc(&mut self, count: usize) {
-		unsafe { (*self.current_frame).add_to_pc(count) }
-	}
-
-	#[inline(always)]
-	fn remove_from_pc(&mut self, count: usize) {
-		unsafe { (*self.current_frame).remove_from_pc(count) }
-	}
-
 	#[inline(always)]
 	fn set_pc(&mut self, count: usize) {
-		unsafe { (*self.current_frame).set_pc(count) }
+		self.current_frame.borrow_mut().set_pc(count)
 	}
+	
+	impl_reads!(read_u8, u8);
 
-	read_bytes!(read_u16, u16, 2);
-	read_bytes!(read_i16, i16, 2);
+	impl_reads!(read_u16, u16);
+	impl_reads!(read_i16, i16);
 
-	read_bytes!(read_u32, u32, 4);
-	read_bytes!(read_i32, i32, 4);
+	impl_reads!(read_u32, u32);
+	impl_reads!(read_i32, i32);
 
-	read_bytes!(read_u64, u64, 8);
-	read_bytes!(read_i64, i64, 8);
+	impl_reads!(read_u64, u64);
+	impl_reads!(read_i64, i64);
 
-	read_bytes!(read_f64, f64, 8);
+	impl_reads!(read_f64, f64);
 }

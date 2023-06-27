@@ -102,7 +102,7 @@ pub enum StackValue {
 	Int(Lit),
 	Float(f64),
 	Bool(bool),
-	Function(*const u8) // TODO: type
+	Function(u16) // TODO: type
 }
 
 macro_rules! stack_op {
@@ -304,7 +304,6 @@ mod tests {
 	#[test]
 	#[should_panic]
 	fn stack_value_op_function() {
-		use std::ptr::null;
-		let _result = StackValue::Function(null()) + StackValue::Function(null());
+		let _result = StackValue::Function(0) + StackValue::Function(1);
 	}
 }
