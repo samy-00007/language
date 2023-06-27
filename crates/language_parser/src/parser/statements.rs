@@ -94,7 +94,7 @@ where
 		};
 
 		if Self::is_item_start(peek) {
-			Stmt::Item(unsafe { self.parse_item().unwrap_unchecked() })
+			Stmt::Item(self.parse_item().unwrap())
 		} else if Self::is_keyword(peek) {
 			self.next();
 			match peek {
