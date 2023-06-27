@@ -3,7 +3,7 @@
 #![allow(clippy::inline_always)]
 #![feature(core_intrinsics)]
 
-use language_codegen::compiler::Compiler;
+use language_codegen::{compiler::Compiler, visitor::get_bytecode};
 use language_engine::vm::Vm;
 use language_parser::parser::Parser;
 
@@ -40,7 +40,9 @@ fn main() {
 
 	let program = compiler.compile(res.0);
 
-	println!("{program:?}");
+	println!("{program:?}\n\n");
+
+	println!("{}", get_bytecode(&program));
 
 	let mut vm = Vm::new(program);
 	vm.run();
