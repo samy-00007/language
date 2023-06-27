@@ -1,10 +1,10 @@
 use crate::{match_infix_op, match_infix_op_lit};
 
 use super::{assembler::Assembler, env::Env};
-use language_ast::{Argument, Expr, Item, Literal, Operator, Stmt, Ty, Prefix};
+use language_ast::{Argument, Expr, Item, Literal, Operator, Prefix, Stmt, Ty};
 use language_engine::vm::{
-		instructions::{Address, Instr, JmpMode, Reg},
-		program::Program
+	instructions::{Address, Instr, JmpMode, Reg},
+	program::Program
 };
 
 #[derive(Debug)]

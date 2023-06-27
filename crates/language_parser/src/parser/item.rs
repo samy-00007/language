@@ -2,9 +2,9 @@
 //! Items are what are at the top level of a module, either in a file or a `mod name { ... }`
 use crate::lexer::Token;
 
-use language_ast::{Item, Ty};
-use crate::error::ParseError;
 use super::{Parser, RetItem};
+use crate::error::ParseError;
+use language_ast::{Item, Ty};
 
 impl<'a, I> Parser<'a, I>
 where

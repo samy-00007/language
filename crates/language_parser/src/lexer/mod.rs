@@ -1,5 +1,5 @@
-use logos::{FilterResult, Lexer, Logos};
 use language_ast::Operator;
+use logos::{FilterResult, Lexer, Logos};
 
 #[derive(Logos, Debug, PartialEq, Eq, Clone, Copy)]
 #[logos(skip r"[ \t\n]+")]
@@ -218,9 +218,6 @@ impl From<Token> for Operator {
 	}
 }
 
-
-
-
 impl From<Operator> for Token {
 	fn from(value: Operator) -> Self {
 		match value {
@@ -266,7 +263,6 @@ impl From<Operator> for Token {
 		}
 	}
 }
-
 
 // TODO: add more tests
 #[cfg(test)]

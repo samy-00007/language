@@ -10,10 +10,7 @@ pub struct Env {
 	last_reg: Reg
 }
 
-
-
 impl Env {
-
 	pub fn allocate_reg(&mut self) -> Reg {
 		assert!(self.last_reg < Reg::MAX);
 		self.last_reg += 1;

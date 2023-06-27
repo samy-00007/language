@@ -1,2 +1,2 @@
-pub mod vm;
 mod utils;
+pub mod vm;

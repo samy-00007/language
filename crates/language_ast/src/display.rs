@@ -1,8 +1,12 @@
+use crate::{Argument, Expr, Generic, Item, Literal, Operator, Prefix, Stmt, Ty};
 use std::fmt::Display;
-use crate::{Stmt, Expr, Literal, Prefix, Operator, Generic, Item, Ty, Argument};
 
-
-fn _print_surrounded_vec<T: Display>(vec: &[T], sep: &str, surround_l: &str, surround_r: &str) -> String {
+fn _print_surrounded_vec<T: Display>(
+	vec: &[T],
+	sep: &str,
+	surround_l: &str,
+	surround_r: &str
+) -> String {
 	let s = print_vec_with_sep(vec, sep);
 	if s.is_empty() {
 		s
@@ -39,14 +43,37 @@ impl Display for Item {
 		let res = match self {
 			Self::Constant { name, ty, value } => {
 				let ty = ty.to_string();
-				let ty = if ty.is_empty() { ty } else { format!(": {}", ty)};
+				let ty = if ty.is_empty() {
+					ty
+				} else {
+					format!(": {}", ty)
+				};
 				format!("const {} {} = {};", name, ty, value)
-			},
-			Self::Struct { name, fields } => format!("struct {} {{\n{}\n}}", name, print_vec_with_sep(fields, ",\n")),
-			Self::Function { name, args, ty, block } => {
+			}
+			Self::Struct { name, fields } => format!(
+				"struct {} {{\n{}\n}}",
+				name,
+				print_vec_with_sep(fields, ",\n")
+			),
+			Self::Function {
+				name,
+				args,
+				ty,
+				block
+			} => {
 				let ty = ty.to_string();
-				let ty = if ty.is_empty() { ty } else { format!("-> {}", ty)};
-				format!("fn {}({}) {} {{\n{}\n}}", name, print_vec_with_sep(args, ", "), ty, print_vec_with_sep(block, "\n"))
+				let ty = if ty.is_empty() {
+					ty
+				} else {
+					format!("-> {}", ty)
+				};
+				format!(
+					"fn {}({}) {} {{\n{}\n}}",
+					name,
+					print_vec_with_sep(args, ", "),
+					ty,
+					print_vec_with_sep(block, "\n")
+				)
 			}
 		};
 		write!(f, "{res}")
@@ -58,17 +85,21 @@ impl Display for Stmt {
 		let res = match self {
 			Self::Expr(x) => format!("{x};"),
 			Self::FnReturn(x) => format!("return {x}"),
-			Self::If { cond, block } => format!("if ({}) {{\n{}\n}}", cond, print_vec_with_sep(block, "\n")),
+			Self::If { cond, block } => {
+				format!("if ({}) {{\n{}\n}}", cond, print_vec_with_sep(block, "\n"))
+			}
 			Self::Local { name, ty: t, val } => {
-				let t_ = t
-					.as_ref()
-					.map_or_else(String::new, |t| format!(": {}", t));
+				let t_ = t.as_ref().map_or_else(String::new, |t| format!(": {}", t));
 				format!("let {name}{t_} = {val};")
 			}
 			Self::Return(x) => format!("{x}"),
 			Self::Item(x) => x.to_string(),
 			Self::While { cond, block } => {
-				format!("while ({}) {{\n{}\n}}", cond, print_vec_with_sep(block, "\n"))
+				format!(
+					"while ({}) {{\n{}\n}}",
+					cond,
+					print_vec_with_sep(block, "\n")
+				)
 			}
 			Self::Error => "<STMT ERROR>".to_string()
 		};
@@ -80,7 +111,9 @@ impl Display for Expr {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		let res = match self {
 			Self::Block(x) => format!("{{\n{}\n}}", print_vec_with_sep(x, "\n")),
-			Self::FnNamedCall { name, args } => format!("{name}({})", print_vec_with_sep(args, ", ")),
+			Self::FnNamedCall { name, args } => {
+				format!("{name}({})", print_vec_with_sep(args, ", "))
+			}
 			Self::Ident(s) => s.to_string(),
 			Self::Lit(l) => format!("{l}"),
 			Self::Infix { op, lhs, rhs } => format!("({lhs} {op} {rhs})"),
@@ -164,7 +197,6 @@ impl Display for Operator {
 		write!(f, "{res}")
 	}
 }
-
 
 impl Display for Generic {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

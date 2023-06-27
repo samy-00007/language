@@ -1,7 +1,7 @@
-use language_ast::{Argument, Block, Expr, Literal, Operator, Prefix, Stmt};
-use crate::error::ParseError;
 use super::{Parser, RetItem};
+use crate::error::ParseError;
 use crate::lexer::Token;
+use language_ast::{Argument, Block, Expr, Literal, Operator, Prefix, Stmt};
 
 impl<'a, I> Parser<'a, I>
 where
@@ -173,12 +173,8 @@ mod tests {
 	use pretty_assertions::assert_eq;
 	use std::vec;
 
+	use crate::{error::ParseError, lexer::Token, parser::Parser};
 	use language_ast::{Argument, Expr, Literal, Operator, Prefix, Stmt, Ty};
-	use crate::{
-		lexer::Token,
-		parser::Parser,
-		error::ParseError
-	};
 
 	#[test]
 	fn parse_args() {

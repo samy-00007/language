@@ -6,8 +6,8 @@ use crate::lexer::Token;
 use logos::{Logos, SpannedIter};
 use std::{iter::Peekable, ops::Range};
 
-use language_ast::{Block, Operator, Ty};
 use crate::error::ParseError;
+use language_ast::{Block, Operator, Ty};
 
 pub type RetItem = (Result<Token, ()>, Range<usize>);
 pub type IteratorItem = (Token, Range<usize>);

@@ -1,6 +1,6 @@
-use std::fmt::Display;
 use crate::lexer::Token;
 use language_ast::Expr;
+use std::fmt::Display;
 
 #[derive(Debug, PartialEq, Clone)]
 #[allow(dead_code)]

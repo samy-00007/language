@@ -1,7 +1,7 @@
-use language_ast::{Expr, Generic, Stmt};
-use crate::error::ParseError;
 use super::{Parser, RetItem};
+use crate::error::ParseError;
 use crate::lexer::Token;
+use language_ast::{Expr, Generic, Stmt};
 
 impl<'a, I> Parser<'a, I>
 where
@@ -113,8 +113,8 @@ where
 
 #[cfg(test)]
 mod tests {
-	use language_ast::{Expr, Literal, Operator, Stmt, Ty};
 	use crate::parser::Parser;
+	use language_ast::{Expr, Literal, Operator, Stmt, Ty};
 	use pretty_assertions::assert_eq;
 
 	#[test]
