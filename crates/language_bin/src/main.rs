@@ -1,5 +1,3 @@
-
-
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![allow(clippy::inline_always)]

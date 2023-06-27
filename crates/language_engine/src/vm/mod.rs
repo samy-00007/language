@@ -8,11 +8,11 @@ pub mod stack;
 
 use callstack::{CallFrame, CallStack, CALL_STACK_SIZE};
 use opcodes::{Address, Lit, Opcode, Reg};
-use stack::{StackValue, VmStack};
 use program::Program;
+use stack::{StackValue, VmStack};
 
 use crate::utils::stack::Stack;
-use std::{cmp::Ordering, cell::RefCell};
+use std::{cell::RefCell, cmp::Ordering};
 
 macro_rules! impl_reads {
 	($name:ident, $t:tt) => {
@@ -23,7 +23,6 @@ macro_rules! impl_reads {
 		}
 	};
 }
-
 
 pub type Register = StackValue;
 
@@ -57,7 +56,7 @@ impl Vm {
 		loop {
 			#[cfg(debug_assertions)]
 			self.current_frame.borrow().ensure_no_overlow();
-			
+
 			let op = self.read_u8().into();
 
 			match op {
@@ -77,25 +76,24 @@ impl Vm {
 				Opcode::Jmp => {
 					let address = self.read_address();
 					self.set_pc(address as usize);
-				},
+				}
 				Opcode::JmpIfTrue => {
 					let reg = self.read_reg();
 					let val = self.get_register(reg);
 					let address = self.read_address();
-					
+
 					if val == StackValue::Bool(true) {
 						self.set_pc(address as usize);
-					} 
+					}
 				}
 				Opcode::JmpIfFalse => {
 					let reg = self.read_reg();
 					let val = self.get_register(reg);
 					let address = self.read_address();
-					
+
 					if val == StackValue::Bool(false) {
 						self.set_pc(address as usize);
-					} 
-					
+					}
 				}
 				Opcode::Add => self.op(std::ops::Add::add),
 				Opcode::Sub => self.op(std::ops::Sub::sub),
@@ -168,10 +166,7 @@ impl Vm {
 				Opcode::LoadF => {
 					let reg = self.read_reg();
 					let id = self.read_u16();
-					self.set_register(
-						reg,
-						StackValue::Function(id)
-					);
+					self.set_register(reg, StackValue::Function(id));
 				}
 				Opcode::LoadTrue => {
 					let reg = self.read_reg();
@@ -290,7 +285,7 @@ impl Vm {
 	fn set_pc(&mut self, count: usize) {
 		self.current_frame.borrow_mut().set_pc(count)
 	}
-	
+
 	impl_reads!(read_u8, u8);
 
 	impl_reads!(read_u16, u16);

@@ -47,5 +47,4 @@ impl Assembler {
 	emit_num!(emit_u16, set_u16, u16);
 	emit_num!(emit_i64, set_i64, i64);
 	emit_num!(emit_f64, set_f64, f64);
-
 }

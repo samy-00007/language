@@ -51,9 +51,9 @@ impl Compiler {
 					self.assembler.emit_u8(lhs);
 					self.assembler.emit_i64(val);
 
-					// let instr = match_infix_op_lit!(op, lhs, val, reg; (Add,Addl), (Mul,Mull), (Sub,Subl), (Div,Divl), (Lt, Ltl));
+				// let instr = match_infix_op_lit!(op, lhs, val, reg; (Add,Addl), (Mul,Mull), (Sub,Subl), (Div,Divl), (Lt, Ltl));
 
-					// self.assembler.add_instr(instr);
+				// self.assembler.add_instr(instr);
 
 				// TODO: constant lhs
 				} else {
@@ -150,17 +150,17 @@ impl Compiler {
 					Opcode::LoadFalse
 				});
 				self.assembler.emit_u8(reg);
-			},
+			}
 			Literal::Int(x) => {
 				self.assembler.emit_opcode(Opcode::Load);
 				self.assembler.emit_u8(reg);
 				self.assembler.emit_i64(x);
-			},
+			}
 			Literal::Float(x) => {
 				self.assembler.emit_opcode(Opcode::LoadFloat);
 				self.assembler.emit_u8(reg);
 				self.assembler.emit_f64(x);
-			},
+			}
 			Literal::String(_) => todo!()
 		};
 	}
@@ -297,8 +297,7 @@ impl Compiler {
 				let len = Address::try_from(self.assembler.program.code.len())
 					.expect("Address bigger than maximum allowed"); // TODO: change that
 
-				self.assembler
-					.set_u16(jmp, len);
+				self.assembler.set_u16(jmp, len);
 			}
 			Stmt::While { cond, block } => {
 				let while_start = Address::try_from(self.assembler.program.code.len())

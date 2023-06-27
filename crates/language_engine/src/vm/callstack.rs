@@ -106,8 +106,6 @@ macro_rules! read_bytes {
 	};
 }
 
-
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CallFrame {
 	function: Program,
@@ -157,7 +155,7 @@ impl CallFrame {
 	pub fn increment_pc(&mut self) {
 		#[cfg(debug_assertions)]
 		assert!(self.pc < usize::MAX);
-	
+
 		self.pc += 1;
 	}
 
@@ -191,9 +189,9 @@ impl CallFrame {
 
 #[cfg(test)]
 mod tests {
-    use crate::vm::program::Program;
+	use crate::vm::program::Program;
 
-    use super::CallFrame;
+	use super::CallFrame;
 
 	#[test]
 	fn read_n() {
@@ -201,7 +199,7 @@ mod tests {
 		program.code = vec![0; 20];
 		program.code[0] = 1;
 
-		let mut frame = CallFrame::new(program, 0,0,0,0,0);
+		let mut frame = CallFrame::new(program, 0, 0, 0, 0, 0);
 		assert_eq!(frame.read_u8(), 1);
 	}
 }
