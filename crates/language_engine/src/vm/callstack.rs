@@ -16,13 +16,7 @@ pub struct CallStack<const N: usize> {
 impl<const N: usize> Stack for CallStack<N> {
 	type Value = RefCell<CallFrame>;
 
-	fn append(&mut self, other: &[Self::Value]) {
-		/*
-		#[cfg(debug_assertions)]
-		assert!(other.len() + self.len() <= N);
-		let len = self.len();
-		self.stack[len..len + other.len()].copy_from_slice(other);
-		*/
+	fn append(&mut self, _other: &[Self::Value]) {
 		unimplemented!()
 	}
 
@@ -46,20 +40,12 @@ impl<const N: usize> Stack for CallStack<N> {
 		self.stack[i].clone()
 	}
 
-	fn get_mut(&mut self, i: usize) -> &mut Self::Value {
-		/*#[cfg(debug_assertions)]
-		assert!(i < self.top);
-		self.stack.get_mut(i)*/
+	fn get_mut(&mut self, _i: usize) -> &mut Self::Value {
 		// we are using refcells, no need for that
 		unimplemented!()
 	}
 
-	fn set(&mut self, i: usize, val: Self::Value) {
-		/*#[cfg(debug_assertions)]
-		assert!(i < self.top);
-		unsafe {
-			*self.stack.get_unchecked_mut(i) = val;
-		}*/
+	fn set(&mut self, _i: usize, _val: Self::Value) {
 		// same as for `get_mut`
 		unimplemented!()
 	}
@@ -71,9 +57,6 @@ impl<const N: usize> Stack for CallStack<N> {
 	}
 
 	fn last_mut(&mut self) -> &mut Self::Value {
-		/*#[cfg(debug_assertions)]
-		assert!(self.top > 0);
-		unsafe { self.stack.get_unchecked_mut(self.top - 1) }*/
 		//same as for `get_mut` and `set`
 		unimplemented!()
 	}
@@ -166,28 +149,16 @@ impl CallFrame {
 	}
 
 	#[inline]
-	pub fn pc(&self) -> usize {
+	pub fn _pc(&self) -> usize {
 		self.pc
 	}
 
 	#[inline(always)]
 	pub fn increment_pc(&mut self) {
-		self.add_to_pc(1);
-	}
-
-	#[inline(always)]
-	pub fn add_to_pc(&mut self, count: usize) {
 		#[cfg(debug_assertions)]
-		assert!(self.pc.checked_add(count).is_some());
-
-		self.pc += count;
-	}
-
-	#[inline(always)]
-	pub fn remove_from_pc(&mut self, count: usize) {
-		#[cfg(debug_assertions)]
-		assert!(self.pc > count);
-		self.pc -= count;
+		assert!(self.pc < usize::MAX);
+	
+		self.pc += 1;
 	}
 
 	#[inline(always)]
@@ -199,6 +170,11 @@ impl CallFrame {
 		let val = self.function.code[self.pc];
 		self.increment_pc();
 		val
+	}
+
+	#[allow(dead_code)]
+	pub fn ensure_no_overlow(&self) {
+		assert!(self.pc < self.function.code.len())
 	}
 
 	read_bytes!(read_u16, u16);
