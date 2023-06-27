@@ -55,6 +55,9 @@ impl Vm {
 		self.update_current_frame();
 		self.stack.preset_up_to(150); // preallocate 10 registers, as of now, they are not allocated automatically
 		loop {
+			#[cfg(debug_assertions)]
+			self.current_frame.borrow().ensure_no_overlow();
+			
 			let op = self.read_u8().into();
 
 			match op {
@@ -71,21 +74,26 @@ impl Vm {
 
 					self.set_register(dst, self.get_register(src));
 				}
-				Opcode::Jmp => self.jump(),
+				Opcode::Jmp => {
+					let address = self.read_address();
+					self.set_pc(address as usize);
+				},
 				Opcode::JmpIfTrue => {
 					let reg = self.read_reg();
 					let val = self.get_register(reg);
-
+					let address = self.read_address();
+					
 					if val == StackValue::Bool(true) {
-						self.jump();
+						self.set_pc(address as usize);
 					} 
 				}
 				Opcode::JmpIfFalse => {
 					let reg = self.read_reg();
 					let val = self.get_register(reg);
-	
+					let address = self.read_address();
+					
 					if val == StackValue::Bool(false) {
-						self.jump();
+						self.set_pc(address as usize);
 					} 
 					
 				}
@@ -253,12 +261,6 @@ impl Vm {
 		let val = self.read_lit();
 
 		self.set_register(dst, op(self.get_register(reg_1), StackValue::Int(val))); // TODO: handle overflow
-	}
-
-	#[inline]
-	fn jump(&mut self) {
-		let address = self.read_address();
-		self.set_pc(address as usize);
 	}
 
 	#[inline(always)]
