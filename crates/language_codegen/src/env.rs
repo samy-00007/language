@@ -1,4 +1,4 @@
-use language_engine::vm::instructions::Reg;
+use language_engine::vm::opcodes::Reg;
 use std::collections::HashMap;
 
 use super::utils::*;

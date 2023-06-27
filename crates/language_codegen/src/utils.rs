@@ -30,35 +30,3 @@ impl From<Ty> for Type {
 		}
 	}
 }
-
-#[macro_export]
-macro_rules! match_infix_op {
-	($op:ident, $reg_1:ident, $reg_2:ident, $dst:ident; $($name:ident),*) => {
-		match $op {
-			$(
-				Operator::$name => Instr::$name {
-					op_1: $reg_1,
-					op_2: $reg_2,
-					dst: $dst,
-				},
-			)*
-			x => todo!("Operator {x:?} not yet handled")
-		}
-	};
-}
-
-#[macro_export]
-macro_rules! match_infix_op_lit {
-	($op:ident, $reg_1:ident, $reg_2:ident, $dst:ident; $(($op_name:ident, $name:ident)),*) => {
-		match $op {
-			$(
-				Operator::$op_name => Instr::$name {
-					op_1: $reg_1,
-					op_2: $reg_2,
-					dst: $dst,
-				},
-			)*
-			x => todo!("Operator {x:?} not yet handled")
-		}
-	};
-}

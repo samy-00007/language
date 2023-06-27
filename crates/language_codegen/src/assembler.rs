@@ -1,4 +1,21 @@
-use language_engine::vm::{instructions::Instr, program::Program};
+use language_engine::vm::{opcodes::Opcode, program::Program};
+
+macro_rules! emit_num {
+	($name:ident, $name_:ident, $t:tt) => {
+		pub fn $name(&mut self, n: $t) -> usize {
+			let old_len = self.program.code.len();
+			let bytes = n.to_le_bytes();
+			self.program.code.extend(bytes);
+			old_len
+		}
+
+		pub fn $name_(&mut self, i: usize, n: $t) {
+			let range = i..(i + std::mem::size_of::<$t>());
+			let bytes = n.to_le_bytes();
+			self.program.code.splice(range, bytes);
+		}
+	};
+}
 
 #[derive(Debug)]
 pub struct Assembler {
@@ -18,36 +35,17 @@ impl Assembler {
 		i
 	}
 
-	unsafe fn compile_instr(instr: Instr) -> &'static mut Vec<u8> {
-		static mut BUFFER: Vec<u8> = Vec::new();
-
-		#[cfg(debug_assertions)]
-		println!("{}", instr.to_string());
-
-		instr.compile(&mut BUFFER);
-
-		&mut BUFFER
-	}
-
-	pub fn add_instr(&mut self, instr: Instr) -> usize {
+	pub fn emit_opcode(&mut self, op: Opcode) -> usize {
 		let old_len = self.program.code.len();
 
-		let instr = unsafe { Self::compile_instr(instr) };
-
-		self.program.code.append(instr);
+		self.emit_u8(op as u8);
 
 		old_len
 	}
 
-	/// This function compile the instruction into bytes and replace
-	/// `i..i+n` with the new instruction, with `n` the number of bytes of
-	/// the compiled instruction. The caller must ensure that the replaced instruction
-	/// is exactly the same size as the new one.
-	pub fn set_instr(&mut self, i: usize, instr: Instr) {
-		let instr = unsafe { Self::compile_instr(instr) }.clone();
+	emit_num!(emit_u8, set_u8, u8);
+	emit_num!(emit_u16, set_u16, u16);
+	emit_num!(emit_i64, set_i64, i64);
+	emit_num!(emit_f64, set_f64, f64);
 
-		let range = i..(i + instr.len());
-
-		self.program.code.splice(range, instr);
-	}
 }

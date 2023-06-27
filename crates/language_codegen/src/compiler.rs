@@ -1,9 +1,7 @@
-use crate::{match_infix_op, match_infix_op_lit};
-
 use super::{assembler::Assembler, env::Env};
 use language_ast::{Argument, Expr, Item, Literal, Operator, Prefix, Stmt, Ty};
 use language_engine::vm::{
-	instructions::{Address, Instr, JmpMode, Reg},
+	opcodes::{Address, Opcode, Reg},
 	program::Program
 };
 
@@ -39,9 +37,23 @@ impl Compiler {
 
 					let Literal::Int(val) = val else {panic!("Constant expression evaluation only support ints for now")};
 
-					let instr = match_infix_op_lit!(op, lhs, val, reg; (Add,Addl), (Mul,Mull), (Sub,Subl), (Div,Divl), (Lt, Ltl));
+					let opcode = match op {
+						Operator::Add => Opcode::Addl,
+						Operator::Sub => Opcode::Subl,
+						Operator::Mul => Opcode::Mull,
+						Operator::Div => Opcode::Divl,
+						Operator::Lt => Opcode::Ltl,
+						x => todo!("operation {x} not yet handled (literal)")
+					};
 
-					self.assembler.add_instr(instr);
+					self.assembler.emit_opcode(opcode);
+					self.assembler.emit_u8(reg);
+					self.assembler.emit_u8(lhs);
+					self.assembler.emit_i64(val);
+
+					// let instr = match_infix_op_lit!(op, lhs, val, reg; (Add,Addl), (Mul,Mull), (Sub,Subl), (Div,Divl), (Lt, Ltl));
+
+					// self.assembler.add_instr(instr);
 
 				// TODO: constant lhs
 				} else {
@@ -51,9 +63,20 @@ impl Compiler {
 					// TODO: handle type checking
 					// TODO: handle other ops
 
-					let instr = match_infix_op!(op, lhs, rhs, reg; Add, Mul, Sub, Div, Lt);
+					let opcode = match op {
+						Operator::Add => Opcode::Add,
+						Operator::Sub => Opcode::Sub,
+						Operator::Mul => Opcode::Mul,
+						Operator::Div => Opcode::Div,
+						Operator::Lt => Opcode::Lt,
+						x => todo!("operation {x} not yet handled (literal)")
+					};
 
-					self.assembler.add_instr(instr);
+					self.assembler.emit_opcode(opcode);
+					self.assembler.emit_u8(reg);
+					self.assembler.emit_u8(lhs);
+					self.assembler.emit_u8(rhs);
+
 					self.env.free_last_reg();
 				}
 				reg
@@ -64,24 +87,32 @@ impl Compiler {
 					let arg = args.into_iter().next().unwrap();
 					let reg = self.compile_expr(reg, arg);
 
-					self.assembler.add_instr(Instr::Print(reg)); // TODO: multiple regs
+					self.assembler.emit_opcode(Opcode::Print); // TODO: multiple regs
+					self.assembler.emit_u8(reg);
 					return reg;
 				} else if name == *"clock" {
-					self.assembler.add_instr(Instr::Clock(reg));
+					self.assembler.emit_opcode(Opcode::Clock);
+					self.assembler.emit_u8(reg);
 					return reg;
 				}
 
 				let f = self.env.get_function(&name); // TODO: handle functions declared after
 				let arg_count = u8::try_from(args.len()).expect("Only accept up to 256 arguments");
 
-				self.assembler.add_instr(Instr::LoadF(reg, f));
+				self.assembler.emit_opcode(Opcode::LoadF);
+				self.assembler.emit_u8(reg);
+				self.assembler.emit_u16(f);
 				for (i, arg) in args.into_iter().enumerate() {
 					#[allow(clippy::cast_possible_truncation)]
 					let i = i as Reg;
 					self.compile_expr(reg + i + 1, arg);
 				}
 
-				self.assembler.add_instr(Instr::Call(reg, arg_count, 1)); // TODO: handle multiple return values
+				// TODO: handle multiple return values
+				self.assembler.emit_opcode(Opcode::Call);
+				self.assembler.emit_u8(reg);
+				self.assembler.emit_u8(arg_count);
+				self.assembler.emit_u8(1);
 
 				reg
 			}
@@ -103,23 +134,33 @@ impl Compiler {
 		} else {
 			let new_reg = self.compile_expr(reg, val);
 			if new_reg != reg {
-				self.assembler.add_instr(Instr::Move {
-					src: new_reg,
-					dst: reg
-				});
+				self.assembler.emit_opcode(Opcode::Move);
+				self.assembler.emit_u8(reg); // dst
+				self.assembler.emit_u8(new_reg);
 			}
 		}
 	}
 
 	fn load_lit(&mut self, reg: u8, lit: Literal) {
 		match lit {
-			Literal::Bool(x) => self.assembler.add_instr(if x {
-				Instr::LoadTrue(reg)
-			} else {
-				Instr::LoadFalse(reg)
-			}),
-			Literal::Int(x) => self.assembler.add_instr(Instr::Load(reg, x)),
-			Literal::Float(x) => self.assembler.add_instr(Instr::LoadFloat(reg, x)),
+			Literal::Bool(x) => {
+				self.assembler.emit_opcode(if x {
+					Opcode::LoadTrue
+				} else {
+					Opcode::LoadFalse
+				});
+				self.assembler.emit_u8(reg);
+			},
+			Literal::Int(x) => {
+				self.assembler.emit_opcode(Opcode::Load);
+				self.assembler.emit_u8(reg);
+				self.assembler.emit_i64(x);
+			},
+			Literal::Float(x) => {
+				self.assembler.emit_opcode(Opcode::LoadFloat);
+				self.assembler.emit_u8(reg);
+				self.assembler.emit_f64(x);
+			},
 			Literal::String(_) => todo!()
 		};
 	}
@@ -240,14 +281,16 @@ impl Compiler {
 
 				self.assembler.program.returned = true;
 
-				self.assembler.add_instr(Instr::Ret(reg, 1));
+				self.assembler.emit_opcode(Opcode::Ret);
+				self.assembler.emit_u8(reg);
+				self.assembler.emit_u8(1);
 			}
 			Stmt::If { cond, block } => {
 				let reg = self.env.allocate_reg();
 				self.compile_expr(reg, cond);
-				let jmp = self
-					.assembler
-					.add_instr(Instr::JmpIfFalse(JmpMode::Absolute, reg, 0));
+				self.assembler.emit_opcode(Opcode::JmpIfFalse);
+				self.assembler.emit_u8(reg);
+				let jmp = self.assembler.emit_u16(u16::MAX);
 				self.env.free_last_reg();
 
 				self.compile_block(block);
@@ -255,27 +298,26 @@ impl Compiler {
 					.expect("Address bigger than maximum allowed"); // TODO: change that
 
 				self.assembler
-					.set_instr(jmp, Instr::JmpIfFalse(JmpMode::Absolute, reg, len));
+					.set_u16(jmp, len);
 			}
 			Stmt::While { cond, block } => {
 				let while_start = Address::try_from(self.assembler.program.code.len())
 					.expect("Address bigger than maximum allowed");
 				let reg = self.env.allocate_reg();
 				self.compile_expr(reg, cond);
-				let jmp = self
-					.assembler
-					.add_instr(Instr::JmpIfFalse(JmpMode::Absolute, reg, 0));
+				self.assembler.emit_opcode(Opcode::JmpIfFalse);
+				self.assembler.emit_u8(reg);
+
+				let jmp = self.assembler.emit_u16(u16::MAX);
 				self.env.free_last_reg();
 
 				self.compile_block(block);
-				self.assembler
-					.add_instr(Instr::Jmp(JmpMode::Absolute, while_start));
+				self.assembler.emit_opcode(Opcode::Jmp);
+				self.assembler.emit_u16(while_start);
 				let len = Address::try_from(self.assembler.program.code.len())
 					.expect("Address bigger than maximum allowed"); // TODO: change that
 
-				let range = (jmp + 3)..(jmp + 3 + (Address::BITS / 8) as usize); // u16 = 2 bytes
-
-				self.assembler.program.code.splice(range, len.to_le_bytes());
+				self.assembler.set_u16(jmp, len);
 			}
 		}
 	}
@@ -294,7 +336,9 @@ impl Compiler {
 		f.compile(block);
 
 		if !f.assembler.program.returned {
-			f.assembler.add_instr(Instr::Ret(0, 0));
+			f.assembler.emit_opcode(Opcode::Ret);
+			f.assembler.emit_u8(0);
+			f.assembler.emit_u8(0);
 		}
 
 		self.assembler.add_function(f.assembler.program);
@@ -320,6 +364,7 @@ impl Compiler {
 
 	pub fn compile(&mut self, block: Vec<Stmt>) -> Program {
 		self.compile_block(block);
+		self.assembler.emit_opcode(Opcode::Halt);
 		self.assembler.program.clone()
 	}
 
