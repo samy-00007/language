@@ -16,9 +16,9 @@ macro_rules! read_bytes {
 	($name:ident, $t:tt, $s:literal) => {
 		#[allow(dead_code)]
 		fn $name(&mut self) -> $t {
-			let bytes = unsafe { std::slice::from_raw_parts(self.pc(), $s) };
+			let val = unsafe { self.pc().cast::<$t>().read_unaligned() };
 			self.add_to_pc($s);
-			$t::from_le_bytes(bytes.try_into().unwrap())
+			val
 		}
 	};
 }
