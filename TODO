@@ -1,3 +1,9 @@
 https://docs.rs/im-rc/latest/im_rc/
 
 accumulator vm
+
+parenthesis expr ?
+
+trace
+
+debug
