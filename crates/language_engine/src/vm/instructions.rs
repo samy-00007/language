@@ -7,6 +7,8 @@ pub use super::stack::*;
 
 // TODO: maybe do graph coloring for register allocation
 
+// https://github.com/boa-dev/boa/blob/main/boa_engine/src/vm/opcode/mod.rs
+
 pub type Reg = u8;
 pub type Lit = i64;
 pub type Address = u16;
@@ -104,7 +106,7 @@ macro_rules! add_n {
 	($n:ident, $t:ty) => {
 		#[allow(dead_code)]
 		fn $n(buffer: &mut Vec<u8>, n: $t) {
-			buffer.append(&mut n.to_le_bytes().to_vec());
+			buffer.extend(n.to_le_bytes());
 		}
 	};
 }

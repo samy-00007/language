@@ -12,6 +12,7 @@ use program::Program;
 use crate::utils::stack::Stack;
 use std::cmp::Ordering;
 
+// check if it as out of bound
 macro_rules! read_bytes {
 	($name:ident, $t:tt, $s:literal) => {
 		#[allow(dead_code)]
