@@ -1,3 +1,5 @@
+/*
+
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![allow(clippy::inline_always)]
@@ -45,7 +47,9 @@ fn main() {
 	let mut vm = Vm::new(program);
 	vm.run();
 }
-
+*/
 /*
    TODO: optimize everything (lexer, parser, ...)
 */
+
+fn main(){}
