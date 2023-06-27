@@ -1,7 +1,10 @@
 #![allow(clippy::pedantic)]
 
 use crate::utils::stack::Stack;
-use std::cell::RefCell;
+use std::{
+	cell::RefCell,
+	rc::Rc
+};
 
 use super::{opcodes::Reg, program::Program};
 
@@ -9,12 +12,12 @@ pub const CALL_STACK_SIZE: usize = 256;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CallStack<const N: usize> {
-	pub stack: [RefCell<CallFrame>; N],
+	pub stack: [Rc<RefCell<CallFrame>>; N],
 	pub top: usize
 }
 
 impl<const N: usize> Stack for CallStack<N> {
-	type Value = RefCell<CallFrame>;
+	type Value = Rc<RefCell<CallFrame>>;
 
 	fn append(&mut self, _other: &[Self::Value]) {
 		unimplemented!()
@@ -78,7 +81,7 @@ impl<const N: usize> Stack for CallStack<N> {
 impl<const N: usize> Default for CallStack<N> {
 	fn default() -> Self {
 		Self {
-			stack: std::array::from_fn(|_| RefCell::new(CallFrame::empty())),
+			stack: std::array::from_fn(|_| Rc::new(RefCell::new(CallFrame::empty()))),
 			top: 1
 		}
 	}
@@ -87,7 +90,7 @@ impl<const N: usize> Default for CallStack<N> {
 impl<const N: usize> CallStack<N> {
 	pub fn new() -> Self {
 		Self {
-			stack: std::array::from_fn(|_| RefCell::new(CallFrame::empty())),
+			stack: std::array::from_fn(|_| Rc::new(RefCell::new(CallFrame::empty()))),
 			top: 0
 		}
 	}

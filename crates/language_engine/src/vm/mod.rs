@@ -12,7 +12,7 @@ use program::Program;
 use stack::{StackValue, VmStack};
 
 use crate::utils::stack::Stack;
-use std::{cell::RefCell, cmp::Ordering};
+use std::{cell::RefCell, cmp::Ordering, rc::Rc};
 
 macro_rules! impl_reads {
 	($name:ident, $t:tt) => {
@@ -31,7 +31,7 @@ pub struct Vm {
 	program: Program,
 	stack: VmStack,
 	call_stack: CallStack<CALL_STACK_SIZE>,
-	current_frame: RefCell<CallFrame>
+	current_frame: Rc<RefCell<CallFrame>>
 }
 
 impl Vm {
@@ -39,20 +39,21 @@ impl Vm {
 		assert!(!program.code.is_empty());
 		let mut call_stack = CallStack::new();
 		let root = CallFrame::new(program.clone(), 0, 0, 0, 0, 0);
-		let root = RefCell::new(root);
-		call_stack.push(root.clone());
+		let root = Rc::new(RefCell::new(root));
+		call_stack.push(root);
+
+		let current = call_stack.last();
 		Self {
 			program,
 			stack: VmStack::default(),
 			call_stack,
-			current_frame: root
+			current_frame: current
 		}
 	}
 
 	// maybe trait
 	pub fn run(&mut self) {
 		self.update_current_frame();
-		self.stack.preset_up_to(150); // preallocate 10 registers, as of now, they are not allocated automatically
 		loop {
 			#[cfg(debug_assertions)]
 			self.current_frame.borrow().ensure_no_overlow();
@@ -135,7 +136,7 @@ impl Vm {
 					let base = self.current_frame.borrow().reg0_p; // TODO: put that in a function
 
 					let frame = CallFrame::new(func, 0, arg_count, ret_count, self.stack.len(), ra);
-					self.call_stack.push(RefCell::new(frame));
+					self.call_stack.push(Rc::new(RefCell::new(frame)));
 					self.update_current_frame();
 
 					//let to_add = vec![Register::zero(); arg_count + 5]; // preallocate argcount + 5 registers for the function
@@ -198,7 +199,7 @@ impl Vm {
 		let base = self.current_frame.borrow().reg0_p;
 		let address = base + reg as usize;
 
-		self.stack.preallocate_up_to(address);
+		self.stack.preset_up_to(address);
 		address
 	}
 
