@@ -52,23 +52,28 @@ pub struct Vm {
 	program: Program,
 	stack: VmStack,
 	call_stack: CallStack<CALL_STACK_SIZE>,
-	current_frame: Rc<RefCell<CallFrame>>
+	current_frame: Rc<RefCell<CallFrame>>,
+	constants: Vec<StackValue>
 }
 
 impl Vm {
 	pub fn new(program: Program) -> Self {
 		assert!(!program.code.is_empty());
+		
 		let mut call_stack = CallStack::new();
 		let root = CallFrame::new(program.clone(), 0, 0, 0, 0, 0);
 		let root = Rc::new(RefCell::new(root));
 		call_stack.push(root);
-
 		let current = call_stack.last().clone();
+
+		let constants = program.constants.clone();
+
 		Self {
 			program,
 			stack: VmStack::default(),
 			call_stack,
-			current_frame: current
+			current_frame: current,
+			constants
 		}
 	}
 
@@ -148,11 +153,9 @@ impl Vm {
 
 					let function = self.get_register(ra);
 
-					let StackValue::Function(func) = function else {
-						panic!("Expected function to call in register");
-					};
+					let func = function.as_fn();
 
-					let func = self.program.functions[*func as usize].clone();
+					let func = self.program.functions[func as usize].clone();
 
 					let base = self.current_frame.borrow().reg0_p; // TODO: put that in a function
 
@@ -207,6 +210,30 @@ impl Vm {
 					let reg = self.read_reg();
 					let val = self.get_register(reg);
 					println!("[Print] val: ({val:?})");
+				}
+				Opcode::LoadConstant => {
+					let reg = self.read_reg();
+					let id = self.read_u16();
+					let constant = self.constants[id as usize].clone();
+
+					self.set_register(reg, constant);
+				}
+				Opcode::LoadEmptyString => {
+					let reg = self.read_reg();
+
+					self.set_register(reg, StackValue::String(String::new()));
+				}
+				Opcode::Concat => {
+					let dst = self.read_reg();
+					let reg_1 = self.read_reg();
+					let reg_2 = self.read_reg();
+
+					let val_1 = self.get_register(reg_1).as_string().to_owned();
+					let val_2 = self.get_register(reg_2).as_string();
+
+					let concat = val_1 + val_2;
+
+					self.set_register(dst, StackValue::String(concat));
 				}
 			}
 		}

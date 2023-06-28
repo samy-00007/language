@@ -224,6 +224,41 @@ impl StackValue {
 	pub fn is_false(&self) -> bool {
 		!self.is_true()
 	}
+
+	pub fn as_string(&self) -> &String {
+		let Self::String(res) = self else {
+			panic!("Expected string when extracting StackValue")
+		};
+		res
+	}
+	
+	pub fn as_int(&self) -> Lit {
+		let Self::Int(res) = self else {
+			panic!("Expected int when extracting StackValue")
+		};
+		*res
+	}
+	
+	pub fn as_float(&self) -> f64 {
+		let Self::Float(res) = self else {
+			panic!("Expected float when extracting StackValue")
+		};
+		*res
+	}
+	
+	pub fn as_bool(&self) -> bool {
+		let Self::Bool(res) = self else {
+			panic!("Expected bool when extracting StackValue")
+		};
+		*res
+	}
+	
+	pub fn as_fn(&self) -> u16 {
+		let Self::Function(res) = self else {
+			panic!("Expected function when extracting StackValue")
+		};
+		*res
+	}
 }
 
 impl Default for StackValue {

@@ -72,6 +72,14 @@ generate_impl! {
 		///
 		/// operands: `Reg`, `u16`
 		LoadF,
+		/// Loads an empty string into the first operand.
+		///
+		/// operands: `Reg`
+		LoadEmptyString,
+		/// Loads a constant into the first operand.
+		///
+		/// operands: `Reg`, `u16`
+		LoadConstant,
 		/// Copies the value in the second operand into the first.
 		///
 		/// operands: `Reg`, `Reg`
@@ -142,6 +150,10 @@ generate_impl! {
 		///
 		/// operands: `Reg`, `u8`
 		Ret,
+		/// Concatenates the string in the third operand to the one in the second operand and puts it in the first (op_1 = op_2 + op_3).
+		///
+		/// operands: `Reg`, `Reg`, `Reg`
+		Concat,
 		/// operands: `Reg`
 		Clock,
 		/// operands: `Reg`

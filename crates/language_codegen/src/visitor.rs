@@ -77,7 +77,10 @@ impl<'a> Visitor<'a> {
 				Opcode::LoadTrue => format!("LOADTRUE {}", self.read_reg()),
 				Opcode::LoadFalse => format!("LOADFALSE {}", self.read_reg()),
 				Opcode::LoadFloat => format!("LOADFLOAT {} {}", self.read_reg(), self.read_f64()),
-				Opcode::Print => format!("PRINT {}", self.read_reg())
+				Opcode::Print => format!("PRINT {}", self.read_reg()),
+				Opcode::LoadConstant => format!("LOADCONSTANT {} {}", self.read_reg(), self.read_u16()),
+				Opcode::LoadEmptyString => format!("LOADEMPTYSTRING {}", self.read_reg()),
+				Opcode::Concat => format!("CONCAT {} {} {}", self.read_reg(), self.read_reg(), self.read_reg())
 			};
 			asm.push(format!("{} - {}", i, str));
 		}

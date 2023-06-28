@@ -10,7 +10,7 @@ use super::{opcodes::Reg, program::Program};
 
 pub const CALL_STACK_SIZE: usize = 256;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CallStack<const N: usize> {
 	pub stack: [Rc<RefCell<CallFrame>>; N],
 	pub top: usize
@@ -109,7 +109,7 @@ macro_rules! read_bytes {
 	};
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CallFrame {
 	function: Program,
 	pc: usize,
