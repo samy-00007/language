@@ -7,3 +7,5 @@ parenthesis expr ?
 trace
 
 debug
+
+Rc + preset_up_to may cause performance issue (see perf diff between 018f803...ba163e1)

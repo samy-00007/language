@@ -22,7 +22,7 @@ fn main() {
 	print(fib(14));
 	";
 
-	const _CODE: &str = "
+	const CODE: &str = "
 	let t: number = clock();
 	let i: number = 0;
 	while(clock() - t < 1000) {
@@ -31,7 +31,7 @@ fn main() {
 	print(i);
 	";
 
-	const CODE: &str = "
+	const _CODE: &str = "
 	let i: number = 0;
 	let str: string = \"\";
 	while(i < 10) {
