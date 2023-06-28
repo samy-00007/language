@@ -5,6 +5,7 @@ mod callstack;
 pub mod opcodes;
 pub mod program;
 pub mod stack;
+use std::ops::{Add, Sub, Mul, Div};
 
 use callstack::{CallFrame, CallStack, CALL_STACK_SIZE};
 use opcodes::{Address, Lit, Opcode, Reg};
@@ -22,6 +23,26 @@ macro_rules! impl_reads {
 			self.current_frame.borrow_mut().$name()
 		}
 	};
+}
+
+macro_rules! gen_op {
+	($self:ident, $op:ident) => {{
+		let dst = $self.read_reg();
+		let reg_1 = $self.read_reg();
+		let reg_2 = $self.read_reg();
+
+		$self.set_register(dst, $self.get_register(reg_1).$op($self.get_register(reg_2).clone())); // TODO: handle overflow
+	}};
+}
+
+macro_rules! gen_op_lit {
+	($self:ident, $op:ident) => {{
+		let dst = $self.read_reg();
+		let reg_1 = $self.read_reg();
+		let val = $self.read_lit();
+
+		$self.set_register(dst, $self.get_register(reg_1).$op(StackValue::Int(val))); // TODO: handle overflow
+	}};
 }
 
 pub type Register = StackValue;
@@ -42,7 +63,7 @@ impl Vm {
 		let root = Rc::new(RefCell::new(root));
 		call_stack.push(root);
 
-		let current = call_stack.last();
+		let current = call_stack.last().clone();
 		Self {
 			program,
 			stack: VmStack::default(),
@@ -72,7 +93,7 @@ impl Vm {
 					let dst = self.read_reg();
 					let src = self.read_reg();
 
-					self.set_register(dst, self.get_register(src));
+					self.set_register(dst, self.get_register(src).clone());
 				}
 				Opcode::Jmp => {
 					let address = self.read_address();
@@ -80,31 +101,31 @@ impl Vm {
 				}
 				Opcode::JmpIfTrue => {
 					let reg = self.read_reg();
-					let val = self.get_register(reg);
+					let cond = self.get_register(reg).is_true();
 					let address = self.read_address();
 
-					if val == StackValue::Bool(true) {
+					if cond {
 						self.set_pc(address as usize);
 					}
 				}
 				Opcode::JmpIfFalse => {
 					let reg = self.read_reg();
-					let val = self.get_register(reg);
+					let cond = self.get_register(reg).is_false();
 					let address = self.read_address();
 
-					if val == StackValue::Bool(false) {
+					if cond {
 						self.set_pc(address as usize);
 					}
 				}
-				Opcode::Add => self.op(std::ops::Add::add),
-				Opcode::Sub => self.op(std::ops::Sub::sub),
-				Opcode::Mul => self.op(std::ops::Mul::mul),
-				Opcode::Div => self.op(std::ops::Div::div),
+				Opcode::Add => gen_op!(self, add),
+				Opcode::Sub => gen_op!(self, sub),
+				Opcode::Mul => gen_op!(self, mul),
+				Opcode::Div => gen_op!(self, div),
 				Opcode::Lt => self.cmp(Ordering::Less),
-				Opcode::Addl => self.op_lit(std::ops::Add::add),
-				Opcode::Subl => self.op_lit(std::ops::Sub::sub),
-				Opcode::Mull => self.op_lit(std::ops::Mul::mul),
-				Opcode::Divl => self.op_lit(std::ops::Div::div),
+				Opcode::Addl => gen_op_lit!(self, add),
+				Opcode::Subl => gen_op_lit!(self, sub),
+				Opcode::Mull => gen_op_lit!(self, mul),
+				Opcode::Divl => gen_op_lit!(self, div),
 				Opcode::Ltl => self.cmp_lit(Ordering::Less),
 				Opcode::Clock => {
 					let now = std::time::SystemTime::now();
@@ -131,7 +152,7 @@ impl Vm {
 						panic!("Expected function to call in register");
 					};
 
-					let func = self.program.functions[func as usize].clone();
+					let func = self.program.functions[*func as usize].clone();
 
 					let base = self.current_frame.borrow().reg0_p; // TODO: put that in a function
 
@@ -145,7 +166,7 @@ impl Vm {
 
 					for i in 0..arg_count {
 						let val = self.raw_get_register(base, ra + 1 + i);
-						self.set_register(i, val);
+						self.set_register(i, val.clone());
 					}
 				}
 				Opcode::Ret => {
@@ -160,7 +181,7 @@ impl Vm {
 
 					for i in 0..ret_count {
 						let val = self.raw_get_register(base, ra + i); // TODO: maybe don't move the regs, just give the fn access to them
-						self.set_register(ret_reg + i, val);
+						self.set_register(ret_reg + i, val.clone());
 					}
 					self.stack.remove(self.stack.len() - base);
 				}
@@ -192,7 +213,7 @@ impl Vm {
 	}
 
 	fn update_current_frame(&mut self) {
-		self.current_frame = self.call_stack.last();
+		self.current_frame = self.call_stack.last().clone();
 	}
 
 	fn ensure_register_exists(&mut self, reg: u8) -> usize {
@@ -203,13 +224,13 @@ impl Vm {
 		address
 	}
 
-	fn get_register(&self, reg: Reg) -> Register {
+	fn get_register(&self, reg: Reg) -> &Register {
 		let base = self.current_frame.borrow().reg0_p;
 		self.raw_get_register(base, reg)
 	}
 
 	#[inline]
-	fn raw_get_register(&self, base: usize, reg: Reg) -> Register {
+	fn raw_get_register(&self, base: usize, reg: Reg) -> &Register {
 		self.stack.get(base + reg as usize)
 	}
 
@@ -220,21 +241,15 @@ impl Vm {
 	}
 
 	#[inline(always)]
-	fn op(&mut self, op: fn(Register, Register) -> Register) {
-		let dst = self.read_reg();
-		let reg_1 = self.read_reg();
-		let reg_2 = self.read_reg();
-
-		self.set_register(dst, op(self.get_register(reg_1), self.get_register(reg_2))); // TODO: handle overflow
-	}
-
-	#[inline(always)]
 	fn cmp(&mut self, ord: Ordering) {
 		let dst = self.read_reg();
 		let reg_1 = self.read_reg();
 		let reg_2 = self.read_reg();
 
-		let cmp = self.get_register(reg_1).cmp(&self.get_register(reg_2));
+		let val_1 = self.get_register(reg_1);
+		let val_2 = self.get_register(reg_2);
+
+		let cmp = val_1.cmp(val_2);
 
 		self.set_register(dst, StackValue::Bool(cmp == ord));
 	}
@@ -248,15 +263,6 @@ impl Vm {
 		let cmp = self.get_register(reg_1).cmp(&StackValue::Int(val));
 
 		self.set_register(dst, StackValue::Bool(cmp == ord));
-	}
-
-	#[inline(always)]
-	fn op_lit(&mut self, op: fn(Register, Register) -> Register) {
-		let dst = self.read_reg();
-		let reg_1 = self.read_reg();
-		let val = self.read_lit();
-
-		self.set_register(dst, op(self.get_register(reg_1), StackValue::Int(val))); // TODO: handle overflow
 	}
 
 	#[inline(always)]

@@ -37,10 +37,10 @@ impl<const N: usize> Stack for CallStack<N> {
 		self.stack[self.top].clone()
 	}
 
-	fn get(&self, i: usize) -> Self::Value {
+	fn get(&self, i: usize) -> &Self::Value {
 		#[cfg(debug_assertions)]
 		assert!(i < self.top);
-		self.stack[i].clone()
+		&self.stack[i]
 	}
 
 	fn get_mut(&mut self, _i: usize) -> &mut Self::Value {
@@ -53,10 +53,10 @@ impl<const N: usize> Stack for CallStack<N> {
 		unimplemented!()
 	}
 
-	fn last(&self) -> Self::Value {
+	fn last(&self) -> &Self::Value {
 		#[cfg(debug_assertions)]
 		assert!(self.top > 0);
-		self.stack[self.top - 1].clone()
+		&self.stack[self.top - 1]
 	}
 
 	fn last_mut(&mut self) -> &mut Self::Value {

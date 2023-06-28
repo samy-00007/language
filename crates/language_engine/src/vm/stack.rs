@@ -29,8 +29,8 @@ impl Stack for VmStack {
 		self.stack.pop().unwrap()
 	}
 
-	fn get(&self, i: usize) -> Self::Value {
-		*self.stack.get(i).unwrap()
+	fn get(&self, i: usize) -> &Self::Value {
+		self.stack.get(i).unwrap()
 	}
 
 	fn get_mut(&mut self, i: usize) -> &mut Self::Value {
@@ -41,8 +41,8 @@ impl Stack for VmStack {
 		*self.stack.get_mut(i).unwrap() = val; // maybe use insert
 	}
 
-	fn last(&self) -> Self::Value {
-		*self.stack.last().unwrap()
+	fn last(&self) -> &Self::Value {
+		self.stack.last().unwrap()
 	}
 
 	fn last_mut(&mut self) -> &mut Self::Value {
@@ -97,12 +97,14 @@ impl Default for VmStack {
 	}
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum StackValue {
 	Int(Lit),
 	Float(f64),
 	Bool(bool),
-	Function(u16) // TODO: type
+	Function(u16),
+	String(String)
+	// TODO: type
 }
 
 macro_rules! stack_op {
@@ -128,24 +130,83 @@ macro_rules! stack_op {
 		}
 	};
 }
+
+
+macro_rules! stack_op_ref {
+	($trait:ident, $name:ident, $op:tt, $all_floats:literal) => {
+		impl $trait<&StackValue> for StackValue {
+			type Output = Self;
+
+			fn $name(self, rhs: &Self) -> Self::Output {
+				match self {
+					Self::Int(x) => match rhs {
+						Self::Int(y) => if $all_floats { Self::Float(x as f64 $op *y as f64) } else { Self::Int(x $op y) },
+						Self::Float(y) => Self::Float(x as f64 $op y),
+						_ => unreachable!()
+					},
+					Self::Float(x) => match rhs {
+						Self::Float(y) => Self::Float(x $op y),
+						Self::Int(y) => Self::Float(x $op *y as f64),
+						_ => unreachable!()
+					},
+					_ => unreachable!()
+				}
+			}
+		}
+	};
+}
+
+macro_rules! stack_op_ref_ {
+	($trait:ident, $name:ident, $op:tt, $all_floats:literal) => {
+		impl $trait<StackValue> for &StackValue {
+			type Output = StackValue;
+
+			fn $name(self, rhs: StackValue) -> Self::Output {
+				match self {
+					StackValue::Int(x) => match rhs {
+						StackValue::Int(y) => if $all_floats { StackValue::Float(*x as f64 $op y as f64) } else { StackValue::Int(x $op y) },
+						StackValue::Float(y) => StackValue::Float(*x as f64 $op y),
+						_ => unreachable!()
+					},
+					StackValue::Float(x) => match rhs {
+						StackValue::Float(y) => StackValue::Float(x $op y),
+						StackValue::Int(y) => StackValue::Float(x $op y as f64),
+						_ => unreachable!()
+					},
+					_ => unreachable!()
+				}
+			}
+		}
+	};
+}
+
+macro_rules! gen_stack_op {
+	($trait:ident, $name:ident, $op:tt, $all_floats:literal) => {
+		stack_op!($trait, $name, $op, $all_floats);
+		stack_op_ref!($trait, $name, $op, $all_floats);
+		stack_op_ref_!($trait, $name, $op, $all_floats);
+	};
+}
+
 // FIXME: handle overflows
-stack_op!(Add, add, +, false);
-stack_op!(Sub, sub, -, false);
-stack_op!(Mul, mul, *, false);
-stack_op!(Div, div, /, true);
+gen_stack_op!(Add, add, +, false);
+gen_stack_op!(Sub, sub, -, false);
+gen_stack_op!(Mul, mul, *, false);
+gen_stack_op!(Div, div, /, true);
+
 
 impl StackValue {
 	#[allow(clippy::should_implement_trait)]
-	pub fn cmp(self, rhs: &Self) -> Ordering {
+	pub fn cmp(&self, rhs: &Self) -> Ordering {
 		match self {
 			Self::Int(x) => match rhs {
 				Self::Int(y) => x.cmp(y),
-				Self::Float(y) => cmp(x as f64, *y),
+				Self::Float(y) => cmp(*x as f64, *y),
 				_ => unreachable!()
 			},
 			Self::Float(x) => match rhs {
-				Self::Float(y) => cmp(x, *y),
-				Self::Int(y) => cmp(x, *y as f64),
+				Self::Float(y) => cmp(*x, *y),
+				Self::Int(y) => cmp(*x, *y as f64),
 				_ => unreachable!()
 			},
 			_ => unreachable!()
@@ -154,6 +215,14 @@ impl StackValue {
 
 	pub const fn zero() -> Self {
 		Self::Int(0)
+	}
+
+	pub fn is_true(&self) -> bool {
+		self == &Self::Bool(true)
+	}
+
+	pub fn is_false(&self) -> bool {
+		!self.is_true()
 	}
 }
 
@@ -215,10 +284,10 @@ mod tests {
 		stack.remove(2);
 		assert_eq!(stack.len(), 8);
 
-		assert_eq!(stack.get(3), StackValue::Int(3));
+		assert_eq!(stack.get(3), &StackValue::Int(3));
 
 		*stack.get_mut(3) = StackValue::Int(9);
-		assert_eq!(stack.get(3), StackValue::Int(9));
+		assert_eq!(stack.get(3), &StackValue::Int(9));
 	}
 
 	macro_rules! test_op {
