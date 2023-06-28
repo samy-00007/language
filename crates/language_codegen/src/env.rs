@@ -5,7 +5,7 @@ use super::utils::*;
 
 #[derive(Debug, Default)]
 pub struct Env {
-	functions: HashMap<String, u16>,
+	functions: HashMap<String, Func>,
 	variables: HashMap<String, Var>,
 	last_reg: Reg
 }
@@ -33,15 +33,15 @@ impl Env {
 		self.variables.contains_key(name)
 	}
 
-	pub fn get_var_reg(&mut self, name: &str) -> Reg {
-		self.variables.get(name).unwrap().reg
+	pub fn get_var_reg(&mut self, name: &str) -> Var {
+		*self.variables.get(name).unwrap()
 	}
 
-	pub fn get_function(&mut self, name: &str) -> u16 {
+	pub fn get_function(&mut self, name: &str) -> Func {
 		*self.functions.get(name).unwrap()
 	}
 
-	pub fn set_function(&mut self, name: String, i: u16) {
-		self.functions.insert(name, i);
+	pub fn set_function(&mut self, name: String, f: Func) {
+		self.functions.insert(name, f);
 	}
 }

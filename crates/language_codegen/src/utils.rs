@@ -1,6 +1,25 @@
 use language_ast::Ty;
 
-#[derive(Debug)]
+
+
+
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Func {
+	pub id: u16,
+	pub ret_ty: Type,
+	pub n_args: u8,
+	pub n_ret: u8
+}
+
+impl Func {
+	pub fn new(id: u16, ret_ty: Type, n_args: u8, n_ret: u8) -> Self {
+		Self { id, ret_ty, n_args, n_ret }
+	}
+}
+
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Var {
 	pub reg: u8,
 	pub ty: Type
@@ -12,11 +31,12 @@ impl Var {
 	}
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Type {
 	Bool,
 	Number,
-	String
+	String,
+	None
 }
 
 impl From<Ty> for Type {

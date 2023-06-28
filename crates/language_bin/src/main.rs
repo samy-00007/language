@@ -11,7 +11,7 @@ use language_parser::parser::Parser;
 // mod bench;
 
 fn main() {
-	const _CODE: &str = "
+	const __CODE: &str = "
 	fn fib(n: number) {
 		if (n < 2) {
 			return n
@@ -22,13 +22,23 @@ fn main() {
 	print(fib(14));
 	";
 
-	const CODE: &str = "
+	const _CODE: &str = "
 	let t: number = clock();
 	let i: number = 0;
 	while(clock() - t < 1000) {
 		i = i + 1;
 	}
 	print(i);
+	";
+
+	const CODE: &str = "
+	let i: number = 0;
+	let str: string = \"\";
+	while(i < 10) {
+		str = str + \"test \";
+		i = i + 1;
+	}
+	print(str);
 	";
 
 	let mut compiler = Compiler::new();

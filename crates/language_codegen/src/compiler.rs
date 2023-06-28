@@ -1,8 +1,10 @@
-use super::{assembler::Assembler, env::Env};
+use crate::utils::{Var, Func};
+
+use super::{assembler::Assembler, env::Env, utils::Type};
 use language_ast::{Argument, Expr, Item, Literal, Operator, Prefix, Stmt, Ty};
 use language_engine::vm::{
 	opcodes::{Address, Opcode, Reg},
-	program::Program
+	program::Program, stack::StackValue
 };
 
 #[derive(Debug)]
@@ -12,22 +14,26 @@ pub struct Compiler {
 }
 
 impl Compiler {
-	fn compile_expr(&mut self, reg: u8, expr: Expr) -> Reg {
+	fn compile_expr(&mut self, reg: u8, expr: Expr) -> (Reg, Type) {
 		match expr {
 			Expr::Lit(x) => {
-				self.load_lit(reg, x);
-				reg
+				let ty = self.load_lit(reg, x);
+				(reg, ty)
 			}
-			Expr::Ident(x) => self.env.get_var_reg(&x),
+			Expr::Ident(x) => {
+				let Var {reg, ty} = self.env.get_var_reg(&x);
+				(reg, ty)
+			},
 			Expr::Infix { op, lhs, rhs } => {
 				if op == Operator::Assign {
 					assert!(matches!(*lhs, Expr::Ident(_)));
 					let Expr::Ident(name) = *lhs else {unreachable!()};
 					let reg = self.env.get_var_reg(&name);
 
-					let rhs = self.compile_expr(reg, *rhs);
-					assert_eq!(rhs, reg);
-					return reg;
+					let (rhs, ty) = self.compile_expr(reg.reg, *rhs);
+					assert_eq!(reg.ty, ty);
+					assert_eq!(reg.reg, rhs);
+					return (reg.reg, ty);
 				}
 
 				let lhs = self.compile_expr(reg, *lhs);
@@ -36,6 +42,7 @@ impl Compiler {
 					let val = Self::compute_constant_expr(rhs.as_ref());
 
 					let Literal::Int(val) = val else {panic!("Constant expression evaluation only support ints for now")};
+					assert_eq!(lhs.1, Type::Number);
 
 					let opcode = match op {
 						Operator::Add => Opcode::Addl,
@@ -48,7 +55,7 @@ impl Compiler {
 
 					self.assembler.emit_opcode(opcode);
 					self.assembler.emit_u8(reg);
-					self.assembler.emit_u8(lhs);
+					self.assembler.emit_u8(lhs.0);
 					self.assembler.emit_i64(val);
 
 				// let instr = match_infix_op_lit!(op, lhs, val, reg; (Add,Addl), (Mul,Mull), (Sub,Subl), (Div,Divl), (Lt, Ltl));
@@ -60,26 +67,33 @@ impl Compiler {
 					let other_reg = self.env.allocate_reg();
 					let rhs = self.compile_expr(other_reg, *rhs);
 
+					assert_eq!(lhs.1, rhs.1);
+
 					// TODO: handle type checking
 					// TODO: handle other ops
 
-					let opcode = match op {
-						Operator::Add => Opcode::Add,
-						Operator::Sub => Opcode::Sub,
-						Operator::Mul => Opcode::Mul,
-						Operator::Div => Opcode::Div,
-						Operator::Lt => Opcode::Lt,
-						x => todo!("operation {x} not yet handled (literal)")
+					let opcode = if lhs.1 == Type::String {
+						assert_eq!(op, Operator::Add, "Cannot do something else than contat string");
+						Opcode::Concat
+					} else {
+						match op {
+							Operator::Add => Opcode::Add,
+							Operator::Sub => Opcode::Sub,
+							Operator::Mul => Opcode::Mul,
+							Operator::Div => Opcode::Div,
+							Operator::Lt => Opcode::Lt,
+							x => todo!("operation {x} not yet handled (literal)")
+						}
 					};
 
 					self.assembler.emit_opcode(opcode);
 					self.assembler.emit_u8(reg);
-					self.assembler.emit_u8(lhs);
-					self.assembler.emit_u8(rhs);
+					self.assembler.emit_u8(lhs.0);
+					self.assembler.emit_u8(rhs.0);
 
 					self.env.free_last_reg();
 				}
-				reg
+				(reg, lhs.1)
 			}
 			Expr::FnNamedCall { name, args } => {
 				if name == *"print" {
@@ -88,12 +102,12 @@ impl Compiler {
 					let reg = self.compile_expr(reg, arg);
 
 					self.assembler.emit_opcode(Opcode::Print); // TODO: multiple regs
-					self.assembler.emit_u8(reg);
+					self.assembler.emit_u8(reg.0);
 					return reg;
 				} else if name == *"clock" {
 					self.assembler.emit_opcode(Opcode::Clock);
 					self.assembler.emit_u8(reg);
-					return reg;
+					return (reg, Type::Number);
 				}
 
 				let f = self.env.get_function(&name); // TODO: handle functions declared after
@@ -101,7 +115,7 @@ impl Compiler {
 
 				self.assembler.emit_opcode(Opcode::LoadF);
 				self.assembler.emit_u8(reg);
-				self.assembler.emit_u16(f);
+				self.assembler.emit_u16(f.id);
 				for (i, arg) in args.into_iter().enumerate() {
 					#[allow(clippy::cast_possible_truncation)]
 					let i = i as Reg;
@@ -114,7 +128,7 @@ impl Compiler {
 				self.assembler.emit_u8(arg_count);
 				self.assembler.emit_u8(1);
 
-				reg
+				(reg, f.ret_ty)
 			}
 			Expr::Block(_)
 			| Expr::Error
@@ -133,15 +147,15 @@ impl Compiler {
 			self.load_lit(reg, val);
 		} else {
 			let new_reg = self.compile_expr(reg, val);
-			if new_reg != reg {
+			if new_reg.0 != reg {
 				self.assembler.emit_opcode(Opcode::Move);
 				self.assembler.emit_u8(reg); // dst
-				self.assembler.emit_u8(new_reg);
+				self.assembler.emit_u8(new_reg.0);
 			}
 		}
 	}
 
-	fn load_lit(&mut self, reg: u8, lit: Literal) {
+	fn load_lit(&mut self, reg: u8, lit: Literal) -> Type {
 		match lit {
 			Literal::Bool(x) => {
 				self.assembler.emit_opcode(if x {
@@ -150,24 +164,34 @@ impl Compiler {
 					Opcode::LoadFalse
 				});
 				self.assembler.emit_u8(reg);
+				Type::Bool
 			}
 			Literal::Int(x) => {
 				self.assembler.emit_opcode(Opcode::Load);
 				self.assembler.emit_u8(reg);
 				self.assembler.emit_i64(x);
+				Type::Number
 			}
 			Literal::Float(x) => {
 				self.assembler.emit_opcode(Opcode::LoadFloat);
 				self.assembler.emit_u8(reg);
 				self.assembler.emit_f64(x);
+				Type::Number
 			}
-			Literal::String(_) => todo!()
-		};
+			Literal::String(x) => {
+				let i = self.assembler.add_constant(StackValue::String(x));
+				self.assembler.emit_opcode(Opcode::LoadConstant);
+				self.assembler.emit_u8(reg);
+				self.assembler.emit_u16(i);
+				Type::String
+			}
+		}
 	}
 
 	fn is_expr_constant(expr: &Expr) -> bool {
 		match expr {
 			Expr::Ident(_) => false, // TODO: check if the val of the ident (fn or variable) is constant
+			Expr::Lit(Literal::String(_)) => false,
 			Expr::Lit(_) => true,
 			Expr::Infix { op: _, lhs, rhs } => {
 				Self::is_expr_constant(lhs.as_ref()) && Self::is_expr_constant(rhs.as_ref())
@@ -282,7 +306,7 @@ impl Compiler {
 				self.assembler.program.returned = true;
 
 				self.assembler.emit_opcode(Opcode::Ret);
-				self.assembler.emit_u8(reg);
+				self.assembler.emit_u8(reg.0);
 				self.assembler.emit_u8(1);
 			}
 			Stmt::If { cond, block } => {
@@ -321,13 +345,15 @@ impl Compiler {
 		}
 	}
 
-	fn compile_function(&mut self, name: String, args: Vec<Argument>, _ty: Ty, block: Vec<Stmt>) {
+	fn compile_function(&mut self, name: String, args: Vec<Argument>, ty: Ty, block: Vec<Stmt>) {
 		let mut f = Self::new();
 		let i = u16::try_from(self.assembler.program.functions.len())
 			.expect("More than 2^16 - 1 (u16) functions");
 
-		f.env.set_function(name.clone(), i);
-		self.env.set_function(name, i);
+		let func = Func::new(i, ty.into(), args.len() as u8, 1);
+
+		f.env.set_function(name.clone(), func);
+		self.env.set_function(name, func);
 		for arg in args {
 			f.env.add_var(arg.name, arg.ty.into());
 		}

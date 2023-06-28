@@ -1,4 +1,4 @@
-use language_engine::vm::{opcodes::Opcode, program::Program};
+use language_engine::vm::{opcodes::Opcode, program::Program, stack::StackValue};
 
 macro_rules! emit_num {
 	($name:ident, $name_:ident, $t:tt) => {
@@ -41,6 +41,12 @@ impl Assembler {
 		self.emit_u8(op as u8);
 
 		old_len
+	}
+
+	pub fn add_constant(&mut self, constant: StackValue) -> u16 {
+		let l = self.program.constants.len();
+		self.program.constants.push(constant);
+		l as u16
 	}
 
 	emit_num!(emit_u8, set_u8, u8);
